@@ -67,11 +67,11 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
 header.top{background:var(--panel);border-bottom:1px solid var(--line)}
 .topbar{display:flex;align-items:center;gap:14px;height:56px}
 .mark{display:flex;align-items:center;gap:9px;min-width:0}
-.flag{width:15px;height:26px;display:flex;flex-direction:column;border:1px solid var(--line)}
+.flag{width:15px;height:26px;flex-shrink:0;display:flex;flex-direction:column;border:1px solid var(--line)}
 .flag i{flex:1;background:var(--aua)}
 .flag i:nth-child(2){background:var(--panel)}
 .mark b{display:block;font-family:var(--f-display);font-weight:700;font-size:19px;letter-spacing:.05em;text-transform:uppercase;line-height:1.05;overflow-wrap:anywhere}
-.mark s{display:block;text-decoration:none;font-family:var(--f-display);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3);line-height:1.4}
+.mark s{display:block;text-decoration:none;font-family:var(--f-display);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3);line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .topbar nav{margin-left:auto;display:flex;gap:2px}
 .topbar nav button{font-family:var(--f-display);text-transform:uppercase;letter-spacing:.11em;font-size:13px;font-weight:600;color:var(--ink-3);padding:7px 11px;border-radius:var(--r)}
 .topbar nav button:hover{color:var(--ink);background:var(--panel-2)}
@@ -123,7 +123,7 @@ main{padding:26px 0 70px}
 .mod:hover{border-color:var(--ink-3);transform:translateY(-1px)}
 .mod .mh{display:flex;align-items:flex-start;gap:11px}
 .mod .ico{width:38px;height:38px;flex-shrink:0;border:1px solid var(--line);border-radius:var(--r);display:grid;place-items:center;color:var(--data);background:var(--panel-2)}
-.mod h3{font-size:17px;letter-spacing:.05em;text-transform:uppercase;overflow-wrap:anywhere;hyphens:auto}
+.mod h3{font-size:17px;letter-spacing:.05em;text-transform:uppercase;overflow-wrap:break-word;hyphens:auto}
 .mod .kind{font-family:var(--f-display);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin-top:2px}
 .mod p{color:var(--ink-2);font-size:13.5px;line-height:1.5}
 .mod .mf{display:flex;align-items:center;gap:10px;margin-top:auto;padding-top:9px;border-top:1px solid var(--line-soft);font-family:var(--f-mono);font-size:11.5px;color:var(--ink-3)}
@@ -327,6 +327,7 @@ main{padding:26px 0 70px}
 <main><div class="wrap" id="view"></div></main>
 <script>
 "use strict";
+document.documentElement.lang = "de";   /* enables German hyphenation for long module names */
 /* ═══ Utilities ═════════════════════════════════════════════════════ */
 const $ = (s, r) => (r || document).querySelector(s);
 const el = (tag, attrs, kids) => {
@@ -1969,10 +1970,1059 @@ function runMultitask() {
 }
 </script>
 <script>
+/* ═══ PPT · Würfelklappen ════════════════════════════════════════════
+   A cube net is folded by walking the grid: each step carries the face
+   normal n and the direction u that "up in the drawing" maps to.
+     right → n'= r      left → n'=-r     (r = u × n)
+     up    → n'= u, u'=-n    down → n'=-u, u'= n
+   Every face therefore knows both which cube side it becomes and how its
+   symbol is oriented, so answers can differ by rotation alone.          */
+const V = {
+  cross: (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]],
+  neg: a => [-a[0], -a[1], -a[2]],
+  key: a => a.map(v => (v === 0 ? 0 : v)).join(",")
+};
+/* Symbols live in a 0..1 box with y pointing down; none is rotationally
+   symmetric, so a wrong rotation is always visible. */
+const CUBE_SYMBOLS = [
+  { name: "Pfeil", paths: [[[.5,.10],[.86,.48],[.64,.48],[.64,.90],[.36,.90],[.36,.48],[.14,.48]]] },
+  { name: "Winkel", paths: [[[.20,.12],[.42,.12],[.42,.66],[.84,.66],[.84,.88],[.20,.88]]] },
+  { name: "Dreieck", paths: [[[.5,.12],[.88,.86],[.12,.86]]] },
+  { name: "Fahne", paths: [[[.24,.10],[.24,.92],[.36,.92],[.36,.56],[.82,.56],[.82,.10]]] },
+  { name: "Blitz", paths: [[[.60,.08],[.28,.54],[.46,.54],[.36,.92],[.72,.44],[.53,.44],[.66,.08]]] },
+  { name: "T-Form", paths: [[[.13,.12],[.87,.12],[.87,.33],[.60,.33],[.60,.90],[.40,.90],[.40,.33],[.13,.33]]] }
+];
+/* Cube nets, every one checked against foldNet (see netIsValid). Grid y grows
+   downward. The runtime filter below keeps a bad entry from ever being shown. */
+const CUBE_NET_CANDIDATES = [
+  [[1,0],[0,1],[1,1],[2,1],[1,2],[1,3]],            /* .#. / ### / .#. / .#. */
+  [[1,0],[1,1],[0,2],[1,2],[2,2],[1,3]],            /* .#. / .#. / ### / .#. */
+  [[1,0],[0,1],[1,1],[2,1],[3,1],[1,2]],            /* .#.. / #### / .#.. */
+  [[3,0],[0,1],[1,1],[2,1],[3,1],[1,2]],            /* ...# / #### / .#.. */
+  [[2,0],[0,1],[1,1],[2,1],[3,1],[2,2]],            /* ..#. / #### / ..#. */
+  [[2,0],[3,0],[0,1],[1,1],[2,1],[1,2]],            /* ..## / ###. / .#.. */
+  [[0,0],[1,0],[2,0],[2,1],[3,1],[4,1]],            /* ###.. / ..### */
+  [[0,0],[0,1],[1,1],[1,2],[2,2],[2,3]],            /* #.. / ##. / .## / ..# */
+  [[1,0],[2,0],[1,1],[0,2],[1,2],[1,3]]             /* .## / .#. / ##. / .#. */
+];
+function foldNet(net) {
+  const k = (x, y) => x + "|" + y;
+  const idx = new Map(net.map((c, i) => [k(c[0], c[1]), i]));
+  const out = new Array(net.length);
+  out[0] = { n: [0, 0, 1], u: [0, 1, 0] };
+  const q = [0];
+  while (q.length) {
+    const i = q.shift();
+    const x = net[i][0], y = net[i][1], n = out[i].n, u = out[i].u;
+    const r = V.cross(u, n);
+    const moves = [[x + 1, y, r, u], [x - 1, y, V.neg(r), u], [x, y - 1, u, V.neg(n)], [x, y + 1, V.neg(u), n]];
+    for (const m of moves) {
+      const j = idx.get(k(m[0], m[1]));
+      if (j === undefined || out[j]) continue;
+      out[j] = { n: m[2], u: m[3] };
+      q.push(j);
+    }
+  }
+  return out;
+}
+function netIsValid(net) {
+  const f = foldNet(net);
+  if (f.some(x => !x)) return false;
+  return new Set(f.map(x => V.key(x.n))).size === 6;
+}
+const CUBE_NETS = CUBE_NET_CANDIDATES.filter(netIsValid);
+/* Isometric projection; the +x, +y and +z faces are the visible ones. */
+const ISO_C = Math.cos(Math.PI / 6), ISO_S = Math.sin(Math.PI / 6);
+const iso = p => [(p[0] - p[2]) * ISO_C, (p[0] + p[2]) * ISO_S - p[1]];
+const VISIBLE = [[0, 1, 0], [0, 0, 1], [1, 0, 0]];   /* Deckfläche, links, rechts */
+
+function drawSymbolPath(x, sym) {
+  x.beginPath();
+  sym.paths.forEach(pts => {
+    pts.forEach((p, i) => (i ? x.lineTo(p[0], p[1]) : x.moveTo(p[0], p[1])));
+    x.closePath();
+  });
+  x.fill();
+}
+function drawCube(x, s, faces) {
+  /* faces: { normalKey: { sym, u } } for at least the three visible sides. */
+  const S = s * 0.30, cx = s / 2, cy = s / 2 + S * 0.16;
+  const shade = { "0,1,0": "rgba(255,255,255,.07)", "0,0,1": "rgba(0,0,0,.05)", "1,0,0": "rgba(0,0,0,.13)" };
+  VISIBLE.forEach(n => {
+    const f = faces[V.key(n)];
+    if (!f) return;
+    const u = f.u, r = V.cross(u, n);
+    const corner = (a, b) => iso([
+      n[0] * .5 + r[0] * a + u[0] * b, n[1] * .5 + r[1] * a + u[1] * b, n[2] * .5 + r[2] * a + u[2] * b]);
+    const pts = [corner(-.5, .5), corner(.5, .5), corner(.5, -.5), corner(-.5, -.5)];
+    x.save();
+    x.translate(cx, cy); x.scale(S, S);
+    x.beginPath();
+    pts.forEach((p, i) => (i ? x.lineTo(p[0], p[1]) : x.moveTo(p[0], p[1])));
+    x.closePath();
+    x.fillStyle = cssv("--panel-2"); x.fill();
+    x.fillStyle = shade[V.key(n)]; x.fill();
+    x.restore();
+    /* symbol, mapped through the face's own axes so rotation is exact */
+    const O = pts[0], X = pts[1], Y = pts[3];
+    x.save();
+    x.translate(cx, cy); x.scale(S, S);
+    x.transform(X[0] - O[0], X[1] - O[1], Y[0] - O[0], Y[1] - O[1], O[0], O[1]);
+    x.fillStyle = cssv("--ink");
+    drawSymbolPath(x, f.sym);
+    x.restore();
+    x.save();
+    x.translate(cx, cy); x.scale(S, S);
+    x.beginPath();
+    pts.forEach((p, i) => (i ? x.lineTo(p[0], p[1]) : x.moveTo(p[0], p[1])));
+    x.closePath();
+    x.restore();
+    x.strokeStyle = cssv("--line"); x.lineWidth = 1.4; x.stroke();
+  });
+}
+function drawNet(x, s, net, folded, syms) {
+  const minX = Math.min.apply(null, net.map(c => c[0])), maxX = Math.max.apply(null, net.map(c => c[0]));
+  const minY = Math.min.apply(null, net.map(c => c[1])), maxY = Math.max.apply(null, net.map(c => c[1]));
+  const w = maxX - minX + 1, h = maxY - minY + 1;
+  const cell = Math.min((s - 16) / w, (s - 16) / h);
+  const ox = (s - cell * w) / 2 - minX * cell, oy = (s - cell * h) / 2 - minY * cell;
+  net.forEach((c, i) => {
+    const px = ox + c[0] * cell, py = oy + c[1] * cell;
+    x.fillStyle = cssv("--panel-2");
+    x.fillRect(px, py, cell, cell);
+    x.strokeStyle = cssv("--line"); x.lineWidth = 1.4;
+    x.strokeRect(px + .5, py + .5, cell - 1, cell - 1);
+    x.save();
+    x.translate(px + cell * .18, py + cell * .18);
+    x.scale(cell * .64, cell * .64);
+    x.fillStyle = cssv("--ink");
+    drawSymbolPath(x, syms[i]);
+    x.restore();
+  });
+}
+
+function cubeQuestion() {
+  const net = pick(CUBE_NETS);
+  const folded = foldNet(net);
+  const syms = shuffle(CUBE_SYMBOLS).slice(0, 6);
+  const correct = {};
+  folded.forEach((f, i) => { correct[V.key(f.n)] = { sym: syms[i], u: f.u }; });
+
+  const sig = faces => VISIBLE.map(n => {
+    const f = faces[V.key(n)];
+    return f.sym.name + "@" + V.key(f.u);
+  }).join("/");
+  const clone = f => { const o = {}; for (const k in f) o[k] = { sym: f[k].sym, u: f[k].u }; return o; };
+  const rot = (n, u, times) => { let v = u; for (let i = 0; i < times; i++) v = V.cross(n, v); return v; };
+
+  const mkSwap = () => {   /* two visible faces trade symbols – wrong adjacency */
+    const c = clone(correct);
+    const [a, b] = sample(VISIBLE, 2);
+    const ka = V.key(a), kb = V.key(b);
+    const t = c[ka].sym; c[ka].sym = c[kb].sym; c[kb].sym = t;
+    return c;
+  };
+  const mkForeign = () => {  /* a hidden face's symbol appears on a visible one */
+    const c = clone(correct);
+    const vis = new Set(VISIBLE.map(V.key));
+    const hidden = Object.keys(correct).filter(k => !vis.has(k));
+    const k = V.key(pick(VISIBLE));
+    c[k] = { sym: correct[pick(hidden)].sym, u: c[k].u };
+    return c;
+  };
+  const mkRot = () => {      /* right faces, one turned the wrong way */
+    const c = clone(correct);
+    const n = pick(VISIBLE), k = V.key(n);
+    c[k] = { sym: c[k].sym, u: rot(n, c[k].u, pick([1, 2, 3])) };
+    return c;
+  };
+  const makers = lvl() === 1 ? [mkSwap, mkForeign, mkSwap, mkForeign]
+    : lvl() === 2 ? [mkSwap, mkForeign, mkRot, mkSwap]
+    : [mkRot, mkRot, mkSwap, mkRot];
+
+  const right = sig(correct);
+  const seen = new Set([right]);
+  const wrong = [];
+  let guard = 0;
+  while (wrong.length < 3 && guard++ < 400) {
+    const cand = pick(makers)();
+    const sg = sig(cand);
+    if (seen.has(sg)) continue;
+    seen.add(sg); wrong.push(cand);
+  }
+  while (wrong.length < 3) {                 /* safety net, never expected */
+    const c = mkSwap(); if (!seen.has(sig(c))) { seen.add(sig(c)); wrong.push(c); }
+    else break;
+  }
+  const opts = shuffle([{ f: correct, ok: true }].concat(wrong.map(f => ({ f, ok: false }))));
+  /* Describe each cube relative to the right one, so a rotation-only distractor
+     is still readable in the debrief list. */
+  const SIDE = ["oben", "links", "rechts"];
+  const turns = (n, uRef, u) => { let v = uRef; for (let k = 0; k < 4; k++) { if (V.key(v) === V.key(u)) return k; v = V.cross(n, v); } return 0; };
+  const describe = f => VISIBLE.map((n, i) => {
+    const k = V.key(n), t = turns(n, correct[k].u, f[k].u);
+    return SIDE[i] + " " + f[k].sym.name + (t ? " (" + t * 90 + "° gedreht)" : "");
+  }).join(", ");
+
+  return {
+    eyebrow: "Würfelklappen · PPT",
+    plain: "Würfelnetz falten (" + syms.map(s => s.name).join(", ") + ")",
+    render: node => {
+      const w = el("div", { class: "instwrap" });
+      instFig(w, 230, (x, s) => drawNet(x, s, net, folded, syms), "Abwicklung");
+      node.appendChild(w);
+    },
+    stem: "Welcher Würfel lässt sich aus dieser Abwicklung falten?",
+    sub: "Die Zeichen sind lagerichtig – achte auch auf ihre Drehung.",
+    optionLayout: "two",
+    options: opts.map(o => ({
+      plain: describe(o.f), ok: o.ok,
+      render: n => { const w = el("div", { style: "display:flex;justify-content:center" });
+        canvasFor(w, 138, (x, s) => drawCube(x, s, o.f)); n.appendChild(w); }
+    })),
+    explain: "Setze eine Fläche als Vorderseite fest und klappe die Nachbarn gedanklich nach hinten: Beim Weiterrücken nach rechts wandert die alte rechte Kante zur neuen Vorderkante, beim Weiterrücken nach oben kippt die Fläche über die obere Kante. Gegenüberliegende Flächen liegen in der Abwicklung immer <b>zwei Felder</b> voneinander entfernt und können nie gleichzeitig sichtbar sein."
+  };
+}
+</script>
+<script>
+/* ═══ Shared helpers for the timed-exposure modules ══════════════════ */
+function canvasBox(parent, w, h, drawFn) {
+  const c = el("canvas", { width: w, height: h, style: `width:${w}px;height:${h}px;max-width:100%` });
+  parent.appendChild(c);
+  const run = () => {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    c.width = w * dpr; c.height = h * dpr;
+    const x = c.getContext("2d");
+    x.setTransform(dpr, 0, 0, dpr, 0, 0);
+    x.clearRect(0, 0, w, h);
+    drawFn(x, w, h);
+  };
+  run(); redrawFns.push(run);
+  return c;
+}
+/* A card that shows something for a fixed time and then resolves. */
+function timedScreen(cfg) {
+  return new Promise(resolve => {
+    const root = el("div", { class: "stage" + (cfg.wide ? " wide" : "") });
+    const head = el("div", { class: "qhead" }, [el("div", { class: "qcount", text: cfg.phase }), el("div", { class: "clock mono" })]);
+    const clock = $(".clock", head);
+    const tbar = el("div", { class: "tbar" }, [el("i")]);
+    const card = el("div", { class: "card qcard" });
+    if (cfg.eyebrow) card.appendChild(el("div", { class: "lbl", text: cfg.eyebrow, style: "margin-bottom:12px" }));
+    const body = el("div"); card.appendChild(body);
+    cfg.build(body);
+    if (cfg.hint) card.appendChild(el("div", { class: "qsub", text: cfg.hint, style: "margin-top:14px" }));
+    root.append(head, tbar, card);
+    view().innerHTML = ""; view().appendChild(root);
+
+    const total = cfg.seconds * 1000, t0 = performance.now();
+    let iv = null;
+    const done = () => { clearInterval(iv); document.onkeydown = null; resolve(); };
+    iv = setInterval(() => {
+      const left = total - (performance.now() - t0), frac = clamp(left / total, 0, 1);
+      clock.textContent = fmtClock(left);
+      const bar = tbar.firstChild; bar.style.width = (frac * 100) + "%";
+      const cls = frac < .2 ? "crit" : frac < .4 ? "low" : "";
+      bar.className = cls; clock.className = "clock mono " + cls;
+      setStrip((cfg.strip || []).concat([{ k: "Restzeit", v: fmtClock(left), tone: frac < .4 ? "caution" : "" }]));
+      if (left <= 0) done();
+    }, 100);
+    State.running = { abort: () => clearInterval(iv) };
+    if (cfg.skippable !== false) {
+      card.appendChild(el("div", { class: "qfoot" }, [
+        el("button", { class: "btn sm", text: "Weiter", onclick: done }), el("div", { class: "hintk", text: "Enter" })]));
+      document.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); done(); } if (e.key === "Escape") { clearInterval(iv); go("home"); } };
+    }
+  });
+}
+
+/* ═══ RMS · Akustisches Gedächtnis ═══════════════════════════════════
+   Digits are read at a steady pace; the sequence stops without warning and
+   the last few digits have to be entered in reverse order.                */
+const Speech = {
+  supported: typeof window.speechSynthesis !== "undefined" && typeof window.SpeechSynthesisUtterance !== "undefined",
+  voice: null,
+  init() {
+    if (!this.supported) return;
+    const choose = () => {
+      let vs = [];
+      try { vs = window.speechSynthesis.getVoices() || []; } catch (e) { return; }
+      this.voice = vs.find(v => /^de/i.test(v.lang)) || vs.find(v => /^en/i.test(v.lang)) || vs[0] || null;
+    };
+    choose();
+    try { window.speechSynthesis.addEventListener("voiceschanged", choose); } catch (e) {}
+  },
+  say(text, rate) {
+    return new Promise(resolve => {
+      if (!this.supported) return resolve(false);
+      let settled = false;
+      const fin = ok => { if (!settled) { settled = true; resolve(ok); } };
+      try {
+        const u = new window.SpeechSynthesisUtterance(String(text));
+        if (this.voice) { u.voice = this.voice; u.lang = this.voice.lang; } else u.lang = "de-DE";
+        u.rate = rate || 1;
+        u.onend = () => fin(true);
+        u.onerror = () => fin(false);
+        window.speechSynthesis.speak(u);
+        setTimeout(() => fin(false), 3000);   /* some engines never fire onend */
+      } catch (e) { fin(false); }
+    });
+  },
+  stop() { try { window.speechSynthesis.cancel(); } catch (e) {} }
+};
+Speech.init();
+
+function rmsIntro() {
+  return new Promise(resolve => {
+    const root = el("div", { class: "stage" });
+    const card = el("div", { class: "card briefing" });
+    card.appendChild(el("div", { class: "kind", text: "Akustisches Gedächtnis · RMS" }));
+    card.appendChild(el("h1", { text: "Tonprüfung" }));
+    card.appendChild(el("p", { text: Speech.supported
+      ? "Die Ziffern werden vorgelesen. Prüfe zuerst, ob du sie hörst – stelle die Lautstärke ein und tippe auf „Probe abspielen“. Wenn nichts zu hören ist, wechsle auf die stille Darstellung; dann erscheinen die Ziffern einzeln auf dem Bildschirm."
+      : "Dieser Browser stellt keine Sprachausgabe bereit. Das Modul läuft in der stillen Darstellung: Die Ziffern erscheinen einzeln und gleich schnell auf dem Bildschirm – die Anforderung an das Gedächtnis bleibt dieselbe." }));
+    const status = el("p", { class: "note", style: "margin-top:12px", text: "" });
+    let mode = Speech.supported ? "audio" : "visual";
+    const seg = el("div", { class: "seg", style: "margin-top:18px" });
+    const setMode = m => { mode = m; Array.from(seg.children).forEach(b => b.setAttribute("aria-pressed", String(b.dataset.m === m))); };
+    [["audio", "Vorlesen"], ["visual", "Still anzeigen"]].forEach(([m, label]) => {
+      const btn = el("button", { type: "button", text: label, "data-m": m, disabled: m === "audio" && !Speech.supported ? "" : null,
+        onclick: () => setMode(m) });
+      seg.appendChild(btn);
+    });
+    setMode(mode);
+    card.appendChild(el("div", { class: "lbl", text: "Darbietung", style: "margin-top:20px;margin-bottom:8px" }));
+    card.appendChild(seg);
+    const foot = el("div", { class: "qfoot", style: "margin-top:20px" });
+    foot.append(
+      el("button", { class: "btn sm", text: "Probe abspielen", disabled: Speech.supported ? null : "",
+        onclick: async e => {
+          status.textContent = "Es sollte „vier – sieben – zwei“ zu hören sein.";
+          const ok = await Speech.say("4", 0.9); await wait(280); await Speech.say("7", 0.9); await wait(280); await Speech.say("2", 0.9);
+          if (!ok) { status.textContent = "Es kam kein Ton an. Wechsle bitte auf die stille Darstellung."; setMode("visual"); }
+        } }),
+      el("button", { class: "btn pri", text: "Los", onclick: () => { document.onkeydown = null; resolve(mode); } }),
+      el("div", { class: "hintk", text: "Enter" }));
+    card.append(status, foot);
+    root.appendChild(card);
+    view().innerHTML = ""; view().appendChild(root);
+    document.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); document.onkeydown = null; resolve(mode); }
+      if (e.key === "Escape") go("home"); };
+  });
+}
+
+function runRMS() {
+  return new Promise(async resolve => {
+    const conf = { 1: { items: 4, recall: 4, pause: 950, len: [7, 10] },
+                   2: { items: 5, recall: 5, pause: 750, len: [9, 14] },
+                   3: { items: 6, recall: 6, pause: 550, len: [11, 17] } }[lvl()];
+    let aborted = false;
+    State.running = { abort: () => { aborted = true; Speech.stop(); } };
+    const mode = await rmsIntro();
+    if (aborted) return;
+
+    const detail = [];
+    let correct = 0, digitsRight = 0, digitsTotal = 0;
+    const t0 = performance.now();
+
+    for (let i = 0; i < conf.items && !aborted; i++) {
+      const len = ri(conf.len[0], conf.len[1]);
+      const seq = Array.from({ length: len }, () => ri(0, 9));
+      await presentSequence(seq, i + 1, conf.items, mode, conf.pause);
+      if (aborted) return;
+      const want = seq.slice(-conf.recall).reverse();
+      const got = await recallPad(want.length, i + 1, conf.items);
+      if (aborted) return;
+      const ok = got.length === want.length && got.every((d, k) => d === want[k]);
+      if (ok) correct++;
+      digitsTotal += want.length;
+      want.forEach((d, k) => { if (got[k] === d) digitsRight++; });
+      detail.push({
+        q: `Folge ${i + 1}: ${len} Ziffern gehört, letzte ${conf.recall} rückwärts`,
+        your: got.length ? got.join(" ") : "keine Eingabe",
+        right: want.join(" "), ok
+      });
+    }
+    if (aborted) return;
+    const digitScore = digitsTotal ? digitsRight / digitsTotal : 0;
+    resolve({
+      correct, total: conf.items,
+      score: Math.round((correct / conf.items * 0.6 + digitScore * 0.4) * 100),
+      timeMs: performance.now() - t0, detail
+    });
+  });
+}
+
+function presentSequence(seq, ix, total, mode, pause) {
+  return new Promise(async resolve => {
+    const root = el("div", { class: "stage" });
+    const head = el("div", { class: "qhead" }, [
+      el("div", { class: "qcount", text: "FOLGE " + pad(ix) + " / " + pad(total) + " · HÖREN" })]);
+    const card = el("div", { class: "card qcard" });
+    card.appendChild(el("div", { class: "lbl", text: mode === "audio" ? "Ziffern werden vorgelesen" : "Ziffern erscheinen einzeln", style: "margin-bottom:14px" }));
+    const stageBox = el("div", { style: "display:grid;place-items:center;min-height:190px;gap:14px" });
+    const big = el("div", { class: "mono", style: "font-size:78px;line-height:1;color:var(--data);font-variant-numeric:tabular-nums" });
+    const wave = el("div", { style: "display:flex;gap:5px;align-items:flex-end;height:26px" });
+    for (let i = 0; i < 9; i++) wave.appendChild(el("i", { style: "width:4px;height:6px;background:var(--line);display:block;border-radius:2px;transition:height .12s" }));
+    const counter = el("div", { class: "note" });
+    stageBox.append(big, wave, counter);
+    card.append(stageBox);
+    card.appendChild(el("div", { class: "qsub", text: "Die Folge endet ohne Ankündigung. Merke dir laufend die zuletzt genannten Ziffern.", style: "margin-top:10px" }));
+    root.append(head, card);
+    view().innerHTML = ""; view().appendChild(root);
+
+    const pulse = on => Array.from(wave.children).forEach((b, k) => {
+      b.style.height = on ? (6 + Math.abs(Math.sin((k + Math.random()) * 1.7)) * 18) + "px" : "6px";
+      b.style.background = on ? "var(--data)" : "var(--line)";
+    });
+    for (let i = 0; i < seq.length; i++) {
+      counter.textContent = "Ziffer " + (i + 1);
+      setStrip([{ k: "Folge", v: ix + "/" + total }, { k: "Ziffer", v: String(i + 1) }]);
+      if (mode === "audio") {
+        big.textContent = "•";
+        pulse(true);
+        const heard = await Speech.say(String(seq[i]), 0.95);
+        pulse(false);
+        if (!heard && i === 0) { mode = "visual"; $(".lbl", card).textContent = "Kein Ton – Ziffern erscheinen einzeln"; }
+      }
+      if (mode === "visual") { big.textContent = String(seq[i]); await wait(520); big.textContent = ""; }
+      await wait(pause);
+      if (!document.body.contains(card)) return resolve();
+    }
+    big.textContent = "";
+    counter.textContent = "Folge beendet";
+    await wait(280);
+    resolve();
+  });
+}
+
+function recallPad(n, ix, total) {
+  return new Promise(resolve => {
+    const entered = [];
+    const root = el("div", { class: "stage" });
+    const head = el("div", { class: "qhead" }, [
+      el("div", { class: "qcount", text: "FOLGE " + pad(ix) + " / " + pad(total) + " · EINGABE" })]);
+    const card = el("div", { class: "card qcard" });
+    card.appendChild(el("div", { class: "qtext", html: `Gib die <b>letzten ${n} Ziffern rückwärts</b> ein – zuletzt gehörte Ziffer zuerst.` }));
+    const slots = el("div", { style: "display:flex;gap:9px;justify-content:center;margin:24px 0 20px;flex-wrap:wrap" });
+    const slotEls = [];
+    for (let i = 0; i < n; i++) {
+      const sl = el("div", { class: "mono", style: "width:52px;height:62px;display:grid;place-items:center;font-size:28px;border:1px solid var(--line);border-radius:3px;background:var(--panel-2);color:var(--data)" });
+      slots.appendChild(sl); slotEls.push(sl);
+    }
+    card.appendChild(slots);
+    const padBox = el("div", { style: "display:grid;grid-template-columns:repeat(5,58px);gap:7px;justify-content:center" });
+    const submit = el("button", { class: "btn pri", text: "Bestätigen", disabled: "", onclick: () => finish() });
+    for (let d = 0; d <= 9; d++) {
+      padBox.appendChild(el("button", { class: "btn sm", type: "button", text: String(d),
+        style: "font-family:var(--f-mono);font-size:17px;padding:11px 0;letter-spacing:0", onclick: () => push(d) }));
+    }
+    card.appendChild(padBox);
+    const foot = el("div", { class: "qfoot", style: "margin-top:18px" });
+    foot.append(el("button", { class: "btn", text: "Löschen", onclick: () => { entered.length = 0; draw(); } }), submit,
+      el("div", { class: "hintk", text: "Zifferntasten · Rücktaste · Enter" }));
+    card.appendChild(foot);
+    root.append(head, card);
+    view().innerHTML = ""; view().appendChild(root);
+
+    function draw() {
+      slotEls.forEach((s, i) => {
+        s.textContent = entered[i] === undefined ? "" : String(entered[i]);
+        s.style.borderColor = i === entered.length ? "var(--data)" : "var(--line)";
+      });
+      submit.disabled = entered.length !== n;
+      setStrip([{ k: "Folge", v: ix + "/" + total }, { k: "Eingabe", v: entered.length + "/" + n }]);
+    }
+    function push(d) { if (entered.length < n) { entered.push(d); draw(); } }
+    function finish() { if (entered.length !== n) return; document.onkeydown = null; resolve(entered.slice()); }
+    document.onkeydown = e => {
+      if (e.key >= "0" && e.key <= "9") { e.preventDefault(); push(parseInt(e.key, 10)); }
+      else if (e.key === "Backspace") { e.preventDefault(); entered.pop(); draw(); }
+      else if (e.key === "Enter") { e.preventDefault(); finish(); }
+      else if (e.key === "Escape") { document.onkeydown = null; go("home"); }
+    };
+    draw();
+  });
+}
+</script>
+<script>
+/* ═══ Logik ══════════════════════════════════════════════════════════
+   Supplementary module: reasoning tasks that are not a named DLR subtest
+   but appear in most other airline selection batteries.                 */
+const LOGIC_TERMS = [
+  ["Verkehrsflugzeuge", "Maschinen mit Druckkabine", "Turboprops"],
+  ["Linienflüge", "Flüge mit Verpflegung", "Nachtflüge"],
+  ["Kapitäne", "Inhaber einer ATPL", "Fluglehrer"],
+  ["Regionaljets", "Muster mit zwei Triebwerken", "Flugzeuge unter 100 Sitzen"],
+  ["Anflüge nach ILS", "Präzisionsanflüge", "Anflüge bei Betriebsstufe II"],
+  ["Frachtmaschinen", "Flugzeuge mit Hauptdecktür", "Passagierjets mit Frachttür"]
+];
+const SYLLOGISMS = [
+  { p: (X, Y, Z) => [`Alle ${X} sind ${Y}.`, `Alle ${Y} sind ${Z}.`],
+    ok: (X, Y, Z) => `Alle ${X} sind ${Z}.`,
+    no: (X, Y, Z) => [`Alle ${Z} sind ${X}.`, `Keine ${X} sind ${Z}.`, `Einige ${Z} sind keine ${Y}.`],
+    why: (X, Y, Z) => `Die Teilmengenkette ${X} &sube; ${Y} &sube; ${Z} lässt nur den Schluss „Alle ${X} sind ${Z}“ zu. Die Umkehrung gilt nicht: Über ${Z}, die nicht zu ${X} gehören, sagen die Prämissen nichts.` },
+  { p: (X, Y, Z) => [`Keine ${X} sind ${Y}.`, `Alle ${Z} sind ${X}.`],
+    ok: (X, Y, Z) => `Keine ${Z} sind ${Y}.`,
+    no: (X, Y, Z) => [`Alle ${Z} sind ${Y}.`, `Einige ${Z} sind ${Y}.`, `Keine ${X} sind ${Z}.`],
+    why: (X, Y, Z) => `${Z} liegt vollständig in ${X}, und ${X} ist von ${Y} getrennt. Damit ist auch ${Z} von ${Y} getrennt.` },
+  { p: (X, Y, Z) => [`Alle ${X} sind ${Y}.`, `Einige ${X} sind ${Z}.`],
+    ok: (X, Y, Z) => `Einige ${Z} sind ${Y}.`,
+    no: (X, Y, Z) => [`Alle ${Z} sind ${Y}.`, `Keine ${Z} sind ${Y}.`, `Alle ${Y} sind ${Z}.`],
+    why: (X, Y, Z) => `Die ${X}, die zugleich ${Z} sind, sind laut erster Prämisse auch ${Y}. Es gibt also mindestens ein Element, das ${Z} und ${Y} zugleich ist – mehr als „einige“ folgt daraus nicht.` },
+  { p: (X, Y, Z) => [`Einige ${X} sind ${Y}.`, `Alle ${Y} sind ${Z}.`],
+    ok: (X, Y, Z) => `Einige ${X} sind ${Z}.`,
+    no: (X, Y, Z) => [`Alle ${X} sind ${Z}.`, `Keine ${X} sind ${Z}.`, `Alle ${Z} sind ${X}.`],
+    why: (X, Y, Z) => `Die ${X}, die ${Y} sind, gehören über die zweite Prämisse auch zu ${Z}. Für <i>alle</i> ${X} reicht die erste Prämisse nicht aus.` },
+  { p: (X, Y, Z) => [`Alle ${X} sind ${Y}.`, `Keine ${Y} sind ${Z}.`],
+    ok: (X, Y, Z) => `Keine ${X} sind ${Z}.`,
+    no: (X, Y, Z) => [`Einige ${X} sind ${Z}.`, `Alle ${Z} sind ${X}.`, `Keine ${Y} sind ${X}.`],
+    why: (X, Y, Z) => `${X} liegt ganz in ${Y}, und ${Y} ist von ${Z} getrennt – also ist auch ${X} von ${Z} getrennt.` }
+];
+
+function logicSyllogism() {
+  const t = pick(SYLLOGISMS);
+  const [X, Y, Z] = shuffle(pick(LOGIC_TERMS));
+  const prem = t.p(X, Y, Z);
+  return {
+    eyebrow: "Schlussfolgerung",
+    stem: `<span style="display:block;padding:12px 15px;background:var(--panel-2);border-left:2px solid var(--data);border-radius:0 3px 3px 0;font-size:16px;line-height:1.7;margin-bottom:14px">${prem.map(x => "&bull;&nbsp; " + x).join("<br>")}</span>Welcher Schluss folgt <b>zwingend</b> aus diesen beiden Aussagen?`,
+    plain: prem.join(" ") + " Welcher Schluss folgt zwingend?",
+    options: textOptions(t.ok(X, Y, Z), t.no(X, Y, Z)),
+    explain: t.why(X, Y, Z)
+  };
+}
+
+function logicNumberSeries() {
+  const kind = pick(["dd", "alt2", "mulAdd", "prod", "sumPrev"]);
+  let seq = [], v = 0, rule = "";
+  if (kind === "dd") {                       /* Differenz wächst gleichmäßig */
+    let a = ri(2, 12), d = ri(2, 6), inc = ri(1, 4);
+    for (let i = 0; i < 6; i++) { seq.push(a); a += d; d += inc; }
+    v = a; rule = `Die Differenzen wachsen jeweils um ${inc}`;
+  } else if (kind === "alt2") {               /* zwei verschränkte Reihen */
+    let a = ri(3, 20), b = ri(30, 70), da = ri(3, 9), db = -ri(3, 9);
+    for (let i = 0; i < 6; i++) { seq.push(i % 2 ? b + db * ((i - 1) / 2) : a + da * (i / 2)); }
+    v = a + da * 3; rule = `Zwei verschränkte Reihen: jede zweite Zahl steigt um ${da}, die andere fällt um ${-db}`;
+  } else if (kind === "mulAdd") {             /* ×q dann +c im Wechsel */
+    let a = ri(2, 7), q = ri(2, 3), c = ri(2, 9);
+    for (let i = 0; i < 6; i++) { seq.push(a); a = i % 2 ? a + c : a * q; }
+    v = a; rule = `Abwechselnd &times;${q} und +${c}`;
+  } else if (kind === "prod") {               /* Produkt der Position */
+    const s0 = ri(2, 6);
+    for (let i = 1; i <= 6; i++) seq.push(s0 * i * (i + 1) / 2);
+    v = s0 * 7 * 8 / 2; rule = `${s0} mal die fortlaufende Summe 1, 3, 6, 10, 15 …`;
+  } else {                                    /* Summe der beiden Vorgänger plus c */
+    let a = ri(1, 6), b = ri(2, 9), c = ri(1, 5);
+    seq = [a, b];
+    for (let i = 0; i < 4; i++) seq.push(seq[seq.length - 1] + seq[seq.length - 2] + c);
+    v = seq[5] + seq[4] + c; rule = `Jede Zahl ist die Summe der beiden Vorgänger plus ${c}`;
+  }
+  return {
+    eyebrow: "Zahlenreihe",
+    stem: `Wie lautet die nächste Zahl?<br><span class="mono" style="font-size:23px;letter-spacing:.05em;display:inline-block;margin-top:10px">${seq.join("&nbsp;&nbsp;·&nbsp;&nbsp;")}&nbsp;&nbsp;·&nbsp;&nbsp;?</span>`,
+    plain: "Zahlenreihe " + seq.join(" "),
+    numericOpts: true,
+    options: numOptions(v, { positive: false, step: Math.max(1, Math.round(Math.abs(v) * .06)) }),
+    explain: `Bildungsgesetz: ${rule}. Das nächste Glied ist <b>${v}</b>.`
+  };
+}
+
+function logicLetterSeries() {
+  const A = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const kind = pick(["step", "grow", "pair", "mirror"]);
+  let letters = [], v = "", rule = "";
+  if (kind === "step") {
+    let i = ri(0, 8), d = ri(2, 5);
+    for (let k = 0; k < 5; k++) { letters.push(A[i % 26]); i += d; }
+    v = A[i % 26]; rule = `Jeder Schritt überspringt ${d - 1} Buchstaben (Abstand ${d})`;
+  } else if (kind === "grow") {
+    let i = ri(0, 5), d = ri(1, 3);
+    for (let k = 0; k < 5; k++) { letters.push(A[i % 26]); i += d; d++; }
+    v = A[i % 26]; rule = "Der Abstand wächst mit jedem Schritt um 1";
+  } else if (kind === "pair") {
+    let i = ri(0, 10), j = ri(14, 22);
+    for (let k = 0; k < 6; k++) letters.push(k % 2 ? A[(j - Math.floor(k / 2)) % 26] : A[(i + Math.floor(k / 2) * 2) % 26]);
+    v = A[(j - 3 + 26) % 26]; rule = "Zwei verschränkte Reihen – eine läuft vorwärts, die andere rückwärts";
+  } else {
+    let i = ri(3, 12);
+    for (let k = 0; k < 5; k++) letters.push(A[(i + k * 3) % 26]);
+    v = A[(i + 15) % 26]; rule = "Abstand 3 im Alphabet";
+  }
+  const wrongs = shuffle(A.split("").filter(c => c !== v)).slice(0, 6);
+  return {
+    eyebrow: "Buchstabenreihe",
+    stem: `Welcher Buchstabe folgt?<br><span class="mono" style="font-size:23px;letter-spacing:.28em;display:inline-block;margin-top:10px">${letters.join(" ")} ?</span>`,
+    plain: "Buchstabenreihe " + letters.join(" "),
+    numericOpts: true,
+    options: textOptions(v, wrongs),
+    explain: `Bildungsgesetz: ${rule}. Der nächste Buchstabe ist <b>${v}</b>.`
+  };
+}
+
+/* Figural matrix: three attributes, one driven by the row, one by the
+   column, one by a Latin square – the classic 3×3 reasoning layout. */
+function drawFigCell(x, w, h, c) {
+  const n = c.count, pad = 7;
+  const cw = (w - pad * 2) / n, size = Math.min(cw * .78, h * .5);
+  for (let i = 0; i < n; i++) {
+    const cx = pad + cw * (i + .5), cy = h / 2, r = size / 2;
+    x.beginPath();
+    if (c.shape === 0) x.arc(cx, cy, r, 0, 7);
+    else if (c.shape === 1) x.rect(cx - r, cy - r, r * 2, r * 2);
+    else { x.moveTo(cx, cy - r); x.lineTo(cx + r, cy + r); x.lineTo(cx - r, cy + r); x.closePath(); }
+    if (c.fill === 2) { x.fillStyle = cssv("--ink"); x.fill(); }
+    else if (c.fill === 1) {
+      x.save(); x.clip();
+      x.fillStyle = cssv("--ink");
+      x.fillRect(cx - r, cy, r * 2, r);
+      x.restore();
+      x.beginPath();
+      if (c.shape === 0) x.arc(cx, cy, r, 0, 7);
+      else if (c.shape === 1) x.rect(cx - r, cy - r, r * 2, r * 2);
+      else { x.moveTo(cx, cy - r); x.lineTo(cx + r, cy + r); x.lineTo(cx - r, cy + r); x.closePath(); }
+    }
+    x.strokeStyle = cssv("--ink"); x.lineWidth = 1.8; x.stroke();
+  }
+}
+function logicMatrix() {
+  const attrs = shuffle(["shape", "count", "fill"]);
+  const rowAttr = attrs[0], colAttr = attrs[1], latinAttr = attrs[2];
+  const perm = { shape: shuffle([0, 1, 2]), count: shuffle([1, 2, 3]), fill: shuffle([0, 1, 2]) };
+  const cellAt = (r, c) => {
+    const o = {};
+    o[rowAttr] = perm[rowAttr][r];
+    o[colAttr] = perm[colAttr][c];
+    o[latinAttr] = perm[latinAttr][(r + c) % 3];
+    return o;
+  };
+  const right = cellAt(2, 2);
+  const mutate = () => {
+    const o = { shape: right.shape, count: right.count, fill: right.fill };
+    const a = pick(["shape", "count", "fill"]);
+    const alt = { shape: [0, 1, 2], count: [1, 2, 3], fill: [0, 1, 2] }[a].filter(v => v !== o[a]);
+    o[a] = pick(alt);
+    return o;
+  };
+  const key = o => o.shape + "-" + o.count + "-" + o.fill;
+  const seen = new Set([key(right)]);
+  const wrong = [];
+  let guard = 0;
+  while (wrong.length < 3 && guard++ < 200) { const m = mutate(); if (!seen.has(key(m))) { seen.add(key(m)); wrong.push(m); } }
+  const names = { shape: "Form", count: "Anzahl", fill: "Füllung" };
+  return {
+    eyebrow: "Figurenmatrix",
+    plain: "Figurenmatrix ergänzen",
+    render: node => {
+      const w = el("div", { class: "instwrap" });
+      canvasBox(w, 330, 250, (x, W, H) => {
+        const cw = W / 3, ch = H / 3;
+        for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) {
+          const px = c * cw, py = r * ch;
+          x.fillStyle = cssv("--panel-2"); x.fillRect(px + 2, py + 2, cw - 4, ch - 4);
+          x.strokeStyle = cssv("--line"); x.lineWidth = 1; x.strokeRect(px + 2.5, py + 2.5, cw - 5, ch - 5);
+          x.save(); x.translate(px + 2, py + 2);
+          if (r === 2 && c === 2) {
+            x.fillStyle = cssv("--data");
+            x.font = "500 34px 'IBM Plex Mono', monospace";
+            x.textAlign = "center"; x.textBaseline = "middle";
+            x.fillText("?", (cw - 4) / 2, (ch - 4) / 2);
+          } else drawFigCell(x, cw - 4, ch - 4, cellAt(r, c));
+          x.restore();
+        }
+      });
+      node.appendChild(w);
+    },
+    stem: "Welches Feld gehört an die Stelle des Fragezeichens?",
+    optionLayout: "two",
+    options: shuffle([{ c: right, ok: true }].concat(wrong.map(c => ({ c, ok: false })))).map(o => ({
+      plain: ["Kreis", "Quadrat", "Dreieck"][o.c.shape] + " ×" + o.c.count + ", " + ["leer", "halb gefüllt", "gefüllt"][o.c.fill],
+      ok: o.ok,
+      render: n => { const w = el("div", { style: "display:flex;justify-content:center" }); canvasBox(w, 150, 62, (x, W, H) => drawFigCell(x, W, H, o.c)); n.appendChild(w); }
+    })),
+    explain: `Drei Merkmale werden getrennt gesteuert: <b>${names[rowAttr]}</b> ist innerhalb einer Zeile konstant, <b>${names[colAttr]}</b> innerhalb einer Spalte, und <b>${names[latinAttr]}</b> kommt in jeder Zeile und jeder Spalte genau einmal vor. Prüfe die Merkmale immer einzeln nacheinander.`
+  };
+}
+
+function logicQuestion() {
+  const gens = lvl() === 1 ? [logicNumberSeries, logicLetterSeries, logicMatrix, logicSyllogism]
+    : [logicNumberSeries, logicLetterSeries, logicMatrix, logicMatrix, logicSyllogism, logicSyllogism];
+  return pick(gens)();
+}
+
+/* ═══ WFG · Wegfiguren ═══════════════════════════════════════════════
+   A route drawn as connected segments; the turns have to be counted from
+   the travelling direction, not from the way the drawing looks.          */
+function makeRoute(turns) {
+  const DIRS = [[1, 0], [0, 1], [-1, 0], [0, -1]];
+  for (let attempt = 0; attempt < 300; attempt++) {
+    const occ = new Set(["0,0"]);
+    let x = 0, y = 0, d = ri(0, 3);
+    const d0 = d;
+    const pts = [[0, 0]];
+    const turnDirs = [];
+    let ok = true;
+    for (let t = 0; t <= turns; t++) {
+      const len = ri(1, 3);
+      let nx = x, ny = y, blocked = false;
+      for (let s = 0; s < len; s++) {
+        nx += DIRS[d][0]; ny += DIRS[d][1];
+        if (occ.has(nx + "," + ny) || Math.abs(nx) > 6 || Math.abs(ny) > 5) { blocked = true; break; }
+        occ.add(nx + "," + ny);
+      }
+      if (blocked) { ok = false; break; }
+      x = nx; y = ny; pts.push([x, y]);
+      if (t < turns) {
+        const nd = (d + (Math.random() < .5 ? 1 : 3)) % 4;
+        /* screen coords with y downward: +1 is a right turn for the traveller */
+        turnDirs.push(nd === (d + 1) % 4 ? "R" : "L");
+        d = nd;
+      }
+    }
+    if (ok && pts.length === turns + 2) return { pts, turns: turnDirs, dir0: DIRS[d0] };
+  }
+  return null;
+}
+function routeQuestion() {
+  const nTurns = { 1: 6, 2: 9, 3: 12 }[lvl()];
+  let r = null, guard = 0;
+  while (!r && guard++ < 20) r = makeRoute(nTurns);
+  if (!r) r = makeRoute(5);
+  const askRight = Math.random() < .5;
+  const count = r.turns.filter(t => (askRight ? t === "R" : t === "L")).length;
+  const opts = [];
+  for (let d = -3; d <= 3; d++) if (d !== 0 && count + d >= 0 && count + d <= r.turns.length) opts.push(String(count + d));
+  return {
+    eyebrow: "Wegfiguren · WFG",
+    plain: `Weg mit ${r.turns.length} Richtungswechseln – ${askRight ? "Rechts" : "Links"}kurven zählen`,
+    render: node => {
+      const w = el("div", { class: "instwrap" });
+      const xs = r.pts.map(p => p[0]), ys = r.pts.map(p => p[1]);
+      const minX = Math.min.apply(null, xs), maxX = Math.max.apply(null, xs);
+      const minY = Math.min.apply(null, ys), maxY = Math.max.apply(null, ys);
+      const W = 460, H = 300, pad = 34;
+      const sc = Math.min((W - pad * 2) / Math.max(1, maxX - minX), (H - pad * 2) / Math.max(1, maxY - minY));
+      const px = p => [(p[0] - minX) * sc + (W - (maxX - minX) * sc) / 2, (p[1] - minY) * sc + (H - (maxY - minY) * sc) / 2];
+      canvasBox(w, W, H, x => {
+        x.fillStyle = cssv("--panel-2"); x.fillRect(0, 0, W, H);
+        x.strokeStyle = cssv("--line"); x.lineWidth = 1; x.strokeRect(.5, .5, W - 1, H - 1);
+        x.strokeStyle = cssv("--ink-2"); x.lineWidth = 2.6; x.lineJoin = "round"; x.lineCap = "round";
+        x.beginPath();
+        r.pts.forEach((p, i) => { const q = px(p); i ? x.lineTo(q[0], q[1]) : x.moveTo(q[0], q[1]); });
+        x.stroke();
+        const s = px(r.pts[0]), e = px(r.pts[r.pts.length - 1]);
+        /* start marker with an arrow giving the initial heading */
+        x.fillStyle = cssv("--ok");
+        x.beginPath(); x.arc(s[0], s[1], 7, 0, 7); x.fill();
+        const a = Math.atan2(r.dir0[1], r.dir0[0]);
+        x.save(); x.translate(s[0], s[1]); x.rotate(a);
+        x.beginPath(); x.moveTo(15, 0); x.lineTo(6, -5); x.lineTo(6, 5); x.closePath(); x.fill(); x.restore();
+        x.fillStyle = cssv("--warn");
+        x.fillRect(e[0] - 6, e[1] - 6, 12, 12);
+        x.font = "600 11px 'Barlow Condensed', sans-serif";
+        const tag = (txt, at, tone) => {
+          const w2 = x.measureText(txt).width + 8;
+          const tx = clamp(at[0] - w2 / 2, 3, W - w2 - 3);
+          const ty = at[1] > 30 ? at[1] - 24 : at[1] + 12;
+          x.fillStyle = cssv("--panel"); x.fillRect(tx, ty, w2, 15);
+          x.fillStyle = tone; x.fillText(txt, tx + 4, ty + 11);
+        };
+        tag("START", s, cssv("--ok"));
+        tag("ZIEL", e, cssv("--warn"));
+      });
+      node.appendChild(w);
+    },
+    stem: `Wie viele <b>${askRight ? "Rechts" : "Links"}kurven</b> enthält dieser Weg?`,
+    sub: "Aus Sicht des Fahrenden zählen, nicht aus Sicht der Zeichnung. Start ist der grüne Punkt, die Pfeilspitze zeigt die Anfangsrichtung.",
+    numericOpts: true,
+    options: textOptions(String(count), shuffle(opts)),
+    explain: `Der Weg enthält ${r.turns.length} Richtungswechsel: ${r.turns.filter(t => t === "R").length} nach rechts und ${r.turns.filter(t => t === "L").length} nach links. Gefragt waren die <b>${askRight ? "Rechts" : "Links"}kurven &rarr; ${count}</b>.<br>Verfolge den Weg gedanklich mit gedrehtem Kopf: Nach einer Kurve nach unten ist „rechts“ auf dem Blatt nicht mehr rechts für den Fahrenden.`
+  };
+}
+</script>
+<script>
+/* ═══ OWT · Optischer Wahrnehmungstest ═══════════════════════════════
+   A board of clocks appears briefly. Only those matching a shape/tone rule
+   count; their times have to be read and repeated in reading order.       */
+function drawClock(x, cx, cy, r, c) {
+  x.save();
+  x.beginPath();
+  if (c.round) x.arc(cx, cy, r, 0, 7); else x.rect(cx - r, cy - r, r * 2, r * 2);
+  x.fillStyle = c.light ? cssv("--panel") : cssv("--ink-2");
+  x.fill();
+  x.strokeStyle = cssv("--ink-3"); x.lineWidth = 1.6; x.stroke();
+  const ink = c.light ? cssv("--ink") : cssv("--panel");
+  x.strokeStyle = ink;
+  x.lineWidth = 1.2;
+  for (let t = 0; t < 12; t++) {
+    const a = t * 30 * Math.PI / 180 - Math.PI / 2;
+    const l = t % 3 === 0 ? r * .22 : r * .12;
+    x.beginPath();
+    x.moveTo(cx + Math.cos(a) * (r - 4), cy + Math.sin(a) * (r - 4));
+    x.lineTo(cx + Math.cos(a) * (r - 4 - l), cy + Math.sin(a) * (r - 4 - l));
+    x.stroke();
+  }
+  const ha = ((c.h % 12) * 30 + c.m * .5) * Math.PI / 180 - Math.PI / 2;
+  const ma = (c.m * 6) * Math.PI / 180 - Math.PI / 2;
+  x.lineCap = "round";
+  x.lineWidth = 3.2;
+  x.beginPath(); x.moveTo(cx, cy); x.lineTo(cx + Math.cos(ha) * r * .48, cy + Math.sin(ha) * r * .48); x.stroke();
+  x.lineWidth = 2;
+  x.beginPath(); x.moveTo(cx, cy); x.lineTo(cx + Math.cos(ma) * r * .74, cy + Math.sin(ma) * r * .74); x.stroke();
+  x.beginPath(); x.arc(cx, cy, 2.4, 0, 7); x.fillStyle = ink; x.fill();
+  x.restore();
+}
+const clockTime = c => c.h + ":" + pad(c.m);
+function makeClockBoard() {
+  const cols = 4, rows = 3;
+  const rule = { round: Math.random() < .5, light: Math.random() < .5 };
+  const halves = lvl() === 3;
+  const mkTime = () => ({ h: ri(1, 12), m: halves && Math.random() < .5 ? 30 : 0 });
+  /* exactly four clocks satisfy the rule */
+  const kinds = [];
+  for (let i = 0; i < 4; i++) kinds.push({ round: rule.round, light: rule.light });
+  const others = [{ round: !rule.round, light: rule.light }, { round: rule.round, light: !rule.light }, { round: !rule.round, light: !rule.light }];
+  for (let i = 0; i < cols * rows - 4; i++) kinds.push(others[i % 3]);
+  const placed = shuffle(kinds).map(k => Object.assign({}, k, mkTime()));
+  const targets = placed.filter(c => c.round === rule.round && c.light === rule.light);
+  return { cols, rows, rule, cells: placed, targets };
+}
+function owtQuestion(board) {
+  const right = board.targets.map(clockTime).join("  ·  ");
+  const seq = board.targets.map(clockTime);
+  const others = board.cells.filter(c => board.targets.indexOf(c) < 0).map(clockTime);
+  const mut = [];
+  const swap = () => { const s = seq.slice(); const i = ri(0, 2); const t = s[i]; s[i] = s[i + 1]; s[i + 1] = t; return s.join("  ·  "); };
+  const repl = () => { const s = seq.slice(); s[ri(0, 3)] = pick(others.length ? others : seq); return s.join("  ·  "); };
+  const shift = () => seq.map(t => { const p = t.split(":"); return ((+p[0] % 12) + 1) + ":" + p[1]; }).join("  ·  ");
+  let guard = 0;
+  const seen = new Set([right]);
+  while (mut.length < 3 && guard++ < 200) {
+    const c = pick([swap, repl, repl, shift])();
+    if (!seen.has(c)) { seen.add(c); mut.push(c); }
+  }
+  const shape = board.rule.round ? "runden" : "eckigen";
+  const tone = board.rule.light ? "hellen" : "dunklen";
+  return {
+    eyebrow: "Optische Wahrnehmung · OWT",
+    stem: `Welche Zeiten zeigten die <b>${shape} ${tone}</b> Uhren – in Lesereihenfolge von links oben nach rechts unten?`,
+    plain: `Zeiten der ${shape} ${tone} Uhren`,
+    numericOpts: true,
+    options: textOptions(right, mut),
+    explain: `Die vier ${shape} ${tone} Uhren zeigten <b>${right}</b>. Merke dir beim Betrachten nur die passenden Uhren und überspringe alle anderen – wer erst alle liest und dann filtert, verliert die Zeit.`
+  };
+}
+async function runOWT() {
+  const rounds = { 1: 4, 2: 5, 3: 6 }[lvl()];
+  const secs = { 1: 11, 2: 8, 3: 6 }[lvl()];
+  let correct = 0;
+  const detail = [];
+  const t0 = performance.now();
+  for (let i = 0; i < rounds; i++) {
+    const board = makeClockBoard();
+    const shape = board.rule.round ? "runden" : "eckigen";
+    const tone = board.rule.light ? "hellen" : "dunklen";
+    await timedScreen({
+      phase: "TAFEL " + pad(i + 1) + " / " + pad(rounds) + " · EINPRÄGEN",
+      eyebrow: `Merke dir die Zeiten der ${shape} ${tone} Uhren`,
+      seconds: secs, wide: true, strip: [{ k: "Tafel", v: (i + 1) + "/" + rounds }],
+      hint: "Genau vier Uhren erfüllen die Regel. Lesereihenfolge: von links oben nach rechts unten.",
+      build: node => {
+        const w = el("div", { class: "gridwrap", style: "display:flex;justify-content:center" });
+        const CW = 118, CH = 118;
+        canvasBox(w, CW * board.cols, CH * board.rows, x => {
+          board.cells.forEach((c, k) => {
+            const col = k % board.cols, row = Math.floor(k / board.cols);
+            drawClock(x, col * CW + CW / 2, row * CH + CH / 2, 44, c);
+          });
+        });
+        node.appendChild(w);
+      }
+    });
+    if (!State.running) return;
+    const r = await runQuiz({ count: 1, perQ: 22, next: () => owtQuestion(board) });
+    if (!r) return;
+    correct += r.correct;
+    detail.push(r.detail[0]);
+  }
+  return { correct, total: rounds, score: Math.round(correct / rounds * 100), timeMs: performance.now() - t0, detail };
+}
+
+/* ═══ SKT · Dreieckstest ═════════════════════════════════════════════
+   Triangles arrive one after another. Two rules compare a triangle with its
+   predecessor; the stream is built so never more than one rule applies.   */
+const SKT_COLORS = [["--data", "Cyan"], ["--caution", "Gelb"], ["--target", "Magenta"]];
+const SKT_DIRS = [["oben", -Math.PI / 2], ["rechts", 0], ["unten", Math.PI / 2], ["links", Math.PI]];
+function drawTriangle(x, w, h, t) {
+  x.clearRect(0, 0, w, h);
+  const cx = w / 2, cy = h / 2, r = Math.min(w, h) * .34;
+  x.save();
+  x.translate(cx, cy);
+  x.rotate(SKT_DIRS[t.dir][1] + Math.PI / 2);
+  x.beginPath();
+  x.moveTo(0, -r); x.lineTo(r * .92, r * .7); x.lineTo(-r * .92, r * .7); x.closePath();
+  x.fillStyle = cssv(SKT_COLORS[t.col][0]); x.fill();
+  x.strokeStyle = cssv("--ink"); x.lineWidth = 1.6; x.stroke();
+  x.fillStyle = cssv("--panel");
+  for (let i = 0; i < t.dots; i++) {
+    x.beginPath(); x.arc((i - (t.dots - 1) / 2) * r * .40, r * .30, r * .12, 0, 7); x.fill();
+  }
+  x.restore();
+}
+function runSKT() {
+  return new Promise(resolve => {
+    const conf = { 1: { secs: 80, show: 2300 }, 2: { secs: 100, show: 1700 }, 3: { secs: 120, show: 1250 } }[lvl()];
+    const ATTRS = [
+      { k: "col", label: "dieselbe Farbe", n: 3 },
+      { k: "dir", label: "dieselbe Richtung", n: 4 },
+      { k: "dots", label: "gleich viele Punkte", n: 4 }
+    ];
+    const [ruleA, ruleB] = sample(ATTRS, 2);
+    const rnd = a => ri(0, a.n - 1);
+    const other = (a, v) => { let x; do { x = rnd(a); } while (x === v); return x; };
+
+    let prev = { col: rnd(ATTRS[0]), dir: rnd(ATTRS[1]), dots: rnd(ATTRS[2]) };
+    let cur = null, expected = null, answered = false;
+    let shown = 0, right = 0, wrong = 0, missed = 0;
+    const rts = [];
+    let stimT = 0, raf = null, running = true;
+
+    const root = el("div", { class: "stage" });
+    const head = el("div", { class: "qhead" }, [el("div", { class: "qcount", text: "DREIECKSTEST" }), el("div", { class: "clock mono" })]);
+    const clock = $(".clock", head);
+    const tbar = el("div", { class: "tbar" }, [el("i")]);
+    const card = el("div", { class: "card qcard" });
+    const rulesBox = el("div", { class: "target-legend", style: "flex-direction:column;align-items:stretch;gap:8px" });
+    rulesBox.appendChild(el("div", { class: "lbl", text: "Regeln – gilt immer im Vergleich zum vorherigen Dreieck" }));
+    rulesBox.appendChild(el("div", { class: "note", style: "text-align:left", html:
+      `<b style="color:var(--ink)">Links [A]</b> &nbsp;&rarr;&nbsp; ${ruleA.label} &nbsp; &nbsp; <b style="color:var(--ink)">Mitte [S]</b> &nbsp;&rarr;&nbsp; keine der beiden Regeln &nbsp; &nbsp; <b style="color:var(--ink)">Rechts [D]</b> &nbsp;&rarr;&nbsp; ${ruleB.label}` }));
+    card.appendChild(rulesBox);
+
+    const arena = el("div", { style: "display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:18px;justify-items:center;margin:6px 0 4px" });
+    const prevHost = el("div", { style: "text-align:center;opacity:.55" });
+    prevHost.appendChild(el("div", { class: "lbl", text: "vorher", style: "margin-bottom:5px" }));
+    const curHost = el("div", { style: "text-align:center" });
+    curHost.appendChild(el("div", { class: "lbl", text: "aktuell", style: "margin-bottom:5px" }));
+    const spacer = el("div", { class: "mono", style: "font-size:22px;color:var(--ink-3)", text: "→" });
+    arena.append(prevHost, spacer, curHost);
+    const prevC = el("canvas", { width: 118, height: 118, style: "width:118px;height:118px" });
+    const curC = el("canvas", { width: 150, height: 150, style: "width:150px;height:150px" });
+    prevHost.appendChild(prevC); curHost.appendChild(curC);
+    card.appendChild(arena);
+
+    const btnRow = el("div", { style: "display:flex;gap:9px;justify-content:center;margin-top:12px;flex-wrap:wrap" });
+    const buttons = [
+      { label: ruleA.label + "  [A]", v: "A" },
+      { label: "keine  [S]", v: "N" },
+      { label: ruleB.label + "  [D]", v: "B" }
+    ].map(b => {
+      const n = el("button", { class: "btn sm", type: "button", text: b.label, onclick: () => respond(b.v) });
+      btnRow.appendChild(n); return n;
+    });
+    card.appendChild(btnRow);
+    const fb = el("div", { class: "note", style: "text-align:center;min-height:20px;margin-top:9px" });
+    card.appendChild(fb);
+    root.append(head, tbar, card);
+    view().innerHTML = ""; view().appendChild(root);
+
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const paint = (c, t, size) => {
+      if (c.width !== size * dpr) { c.width = size * dpr; c.height = size * dpr; }
+      const x = c.getContext("2d");
+      x.setTransform(dpr, 0, 0, dpr, 0, 0);
+      if (t) drawTriangle(x, size, size, t); else x.clearRect(0, 0, size, size);
+    };
+
+    function nextStim() {
+      const mode = pick(["A", "B", "N", "N"]);
+      const t = { col: prev.col, dir: prev.dir, dots: prev.dots };
+      const setSame = a => { t[a.k] = prev[a.k]; };
+      const setDiff = a => { t[a.k] = other(a, prev[a.k]); };
+      if (mode === "A") { setSame(ruleA); setDiff(ruleB); }
+      else if (mode === "B") { setSame(ruleB); setDiff(ruleA); }
+      else { setDiff(ruleA); setDiff(ruleB); }
+      const third = ATTRS.find(a => a !== ruleA && a !== ruleB);
+      t[third.k] = rnd(third);
+      cur = t; expected = mode; answered = false;
+      shown++;
+      paint(prevC, prev, 118);
+      paint(curC, cur, 150);
+      stimT = performance.now();
+      setStrip([{ k: "Reize", v: String(shown) }, { k: "Richtig", v: right + "/" + shown },
+        { k: "Fehler", v: String(wrong), tone: wrong ? "caution" : "" }]);
+    }
+    function respond(v) {
+      if (!running || answered || !cur) return;
+      answered = true;
+      if (v === expected) { right++; rts.push(performance.now() - stimT); fb.textContent = "richtig"; fb.style.color = "var(--ok)"; }
+      else { wrong++; fb.textContent = "falsch"; fb.style.color = "var(--warn)"; }
+      advance();
+    }
+    let timer = null;
+    function advance() {
+      clearTimeout(timer);
+      prev = cur;
+      setTimeout(() => { if (running) { nextStim(); timer = setTimeout(timeout, conf.show); } }, 200);
+    }
+    function timeout() {
+      if (!running || answered) return;
+      answered = true; missed++;
+      fb.textContent = "zu langsam"; fb.style.color = "var(--caution)";
+      advance();
+    }
+    const kd = e => {
+      const k = e.key.toLowerCase();
+      if (k === "a") { e.preventDefault(); respond("A"); }
+      else if (k === "s") { e.preventDefault(); respond("N"); }
+      else if (k === "d") { e.preventDefault(); respond("B"); }
+      else if (k === "escape") { stop(); go("home"); }
+    };
+    window.addEventListener("keydown", kd);
+
+    const total = conf.secs * 1000, t0 = performance.now();
+    const iv = setInterval(() => {
+      const left = total - (performance.now() - t0), frac = clamp(left / total, 0, 1);
+      clock.textContent = fmtClock(left);
+      const bar = tbar.firstChild; bar.style.width = (frac * 100) + "%";
+      const cls = frac < .17 ? "crit" : frac < .34 ? "low" : "";
+      bar.className = cls; clock.className = "clock mono " + cls;
+      if (left <= 0) finish();
+    }, 150);
+    function stop() {
+      running = false;
+      clearInterval(iv); clearTimeout(timer);
+      window.removeEventListener("keydown", kd);
+    }
+    State.running = { abort: stop };
+    function finish() {
+      stop();
+      const answeredN = right + wrong;
+      const acc = answeredN ? right / answeredN : 0;
+      const cover = shown ? answeredN / shown : 0;
+      const rt = rts.length ? Math.round(rts.reduce((a, b) => a + b, 0) / rts.length) : 0;
+      resolve({
+        correct: right, total: shown,
+        score: Math.round(acc * cover * 100),
+        timeMs: performance.now() - t0,
+        detail: [
+          { q: "Bearbeitete Dreiecke", your: String(shown), right: "so viele wie möglich", ok: shown >= (lvl() === 1 ? 28 : lvl() === 2 ? 45 : 70) },
+          { q: "Richtige Zuordnungen", your: right + " von " + answeredN, right: answeredN + " von " + answeredN, ok: wrong === 0 },
+          { q: "Fehlentscheidungen", your: String(wrong), right: "0", ok: wrong === 0 },
+          { q: "Verpasste Reize (keine Antwort im Zeitfenster)", your: String(missed), right: "0", ok: missed === 0 },
+          { q: "Mittlere Reaktionszeit", your: rt ? rt + " ms" : "—", right: "< " + Math.round(conf.show * .6) + " ms", ok: rt > 0 && rt < conf.show * .6 }
+        ]
+      });
+    }
+    nextStim();
+    timer = setTimeout(timeout, conf.show);
+  });
+}
+</script>
+<script>
 /* ═══ Module registry ═══════════════════════════════════════════════ */
 const ic = d => `<svg width="19" height="19" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
 const MODULES = [
-  { id: "math", name: "Kopfrechnen", kind: "Rechnen unter Zeitdruck", count: 12, perQ: 45,
+  { id: "math", name: "Kopfrechnen", kind: "Rechnen unter Zeitdruck", code: "KRN", count: 12, perQ: 45,
     icon: ic('<path d="M3 6h5M5.5 3.5v5M12 5.5h5M12 14.5h5M12 12l4.5 4.5M16.5 12L12 16.5M3 15h5"/>'),
     desc: "Fliegerische Überschlagsrechnungen und Grundrechenarten ohne Hilfsmittel – Zeit-Weg-Geschwindigkeit, Treibstoff, Sinkprofile, Einheiten.",
     what: "Getestet wird sicheres, schnelles Kopfrechnen unter Zeitdruck. Es geht weniger um komplizierte Mathematik als um Zahlensicherheit und den Umgang mit fliegerischen Faustformeln.",
@@ -1982,7 +3032,7 @@ const MODULES = [
       "Nicht an einer Aufgabe festbeißen. Wer eine Aufgabe verliert, aber im Takt bleibt, kommt besser durch als umgekehrt."],
     run: () => runQuiz({ count: 12, perQ: 45, next: () => mathQuestion() }) },
 
-  { id: "tech", name: "Technisches Verständnis", kind: "Physik & Technik", count: 12, perQ: 50,
+  { id: "tech", name: "Technisches Verständnis", kind: "Physik & Technik", code: "TVT", count: 12, perQ: 50,
     icon: ic('<circle cx="10" cy="10" r="2.6"/><path d="M10 2.5v2.2M10 15.3v2.2M2.5 10h2.2M15.3 10h2.2M4.7 4.7l1.6 1.6M13.7 13.7l1.6 1.6M15.3 4.7l-1.6 1.6M6.3 13.7l-1.6 1.6"/>'),
     desc: "Mechanik, Hydraulik, Elektrik, Strömungslehre und Flugzeugsysteme – klassische Aufgaben zum physikalischen Grundverständnis.",
     what: "Geprüft wird technisch-physikalisches Grundverständnis auf Schulniveau: Hebel, Zahnräder, Druck, Stromkreise, Auftrieb und der grundsätzliche Aufbau von Flugzeugsystemen.",
@@ -1992,7 +3042,7 @@ const MODULES = [
       "Lies die Aufgaben genau. Häufig unterscheiden sich die Antworten nur in einem Wort („nur“, „ausschließlich“, „immer“)."],
     run: () => { const used = new Set(); return runQuiz({ count: 12, perQ: 50, next: i => techQuestion(i, used) }); } },
 
-  { id: "english", name: "Englisch", kind: "Sprachkompetenz ICAO", count: 12, perQ: 55,
+  { id: "english", name: "Englisch", kind: "Sprachkompetenz ICAO", code: "ENS", count: 12, perQ: 55,
     icon: ic('<path d="M10 3v14M3 5.5h14M4.5 3h11a1 1 0 011 1v12a1 1 0 01-1 1h-11a1 1 0 01-1-1V4a1 1 0 011-1z"/>'),
     desc: "Wortschatz, Grammatik, Leseverständnis und Standard-Sprechgruppen – auf dem Niveau, das im Auswahlverfahren erwartet wird.",
     what: "Geprüft wird Englisch auf sicherem Niveau: allgemeiner und fliegerischer Wortschatz, Grammatik sowie das Verständnis von Texten und Funksprechgruppen.",
@@ -2002,7 +3052,7 @@ const MODULES = [
       "Standardphraseologie einprägen: der Unterschied zwischen roger, wilco, affirm und standby wird gerne abgefragt."],
     run: () => { const used = new Set(); return runQuiz({ count: 12, perQ: 55, next: i => engQuestion(i, used) }); } },
 
-  { id: "memory", name: "Merkfähigkeit", kind: "Kurzzeitgedächtnis", count: 8, perQ: 18,
+  { id: "memory", name: "Merkfähigkeit", kind: "Kurzzeitgedächtnis", code: "VMC", count: 8, perQ: 18,
     icon: ic('<path d="M4 4h12v12H4zM4 8h12M8 8v8M4 12h12"/>'),
     desc: "Einen Abflugplan mit Flugnummern, Zielen, Gates, Pisten, Flugflächen und Frequenzen einprägen und anschließend abfragen lassen.",
     what: "Geprüft wird das Kurzzeitgedächtnis für strukturierte Daten – genau die Art von Information, die im Cockpit aus Freigaben und Unterlagen aufgenommen werden muss.",
@@ -2012,7 +3062,7 @@ const MODULES = [
       "Am Ende der Lernzeit den Plan im Kopf einmal komplett durchgehen, statt bis zur letzten Sekunde neue Details aufzunehmen."],
     run: runMemory },
 
-  { id: "spatial", name: "Räumliche Orientierung", kind: "Fluglagen erkennen", count: 12, perQ: 20,
+  { id: "spatial", name: "Räumliche Orientierung", kind: "Fluglagen erkennen", code: "ROT", count: 12, perQ: 20,
     icon: ic('<circle cx="10" cy="10" r="7"/><path d="M3.6 12.2c3.5-1.6 9.3-1.6 12.8 0"/><path d="M6.5 10h7"/>'),
     desc: "Aus dem künstlichen Horizont die Fluglage ableiten – und umgekehrt. Der Klassiker unter den fliegerischen Eignungstests.",
     what: "Geprüft wird räumliches Vorstellungsvermögen: die Fähigkeit, eine Instrumentenanzeige in eine räumliche Lage zu übersetzen und dabei die Blickrichtung mitzudenken.",
@@ -2032,7 +3082,7 @@ const MODULES = [
       "Variometer und Längsneigung müssen zusammenpassen – widersprechen sie sich, ist eine der beiden Anzeigen falsch abgelesen."],
     run: () => runQuiz({ count: 10, perQ: 25, next: () => instrumentQuestion() }) },
 
-  { id: "concentration", name: "Konzentration", kind: "Daueraufmerksamkeit", count: 1, perQ: 70,
+  { id: "concentration", name: "Konzentration", kind: "Daueraufmerksamkeit", code: "d2", count: 1, perQ: 70,
     icon: ic('<path d="M2.5 10s3-5.5 7.5-5.5S17.5 10 17.5 10s-3 5.5-7.5 5.5S2.5 10 2.5 10z"/><circle cx="10" cy="10" r="2.2"/>'),
     desc: "Zielzeichen in einem dichten Zeichenfeld unter Zeitdruck finden – ohne die falschen anzuklicken.",
     what: "Geprüft werden Konzentrationsleistung und Sorgfalt über eine längere Belastungsdauer. Bewertet wird nicht nur die Menge, sondern vor allem die Fehlerquote.",
@@ -2042,7 +3092,7 @@ const MODULES = [
       "Nicht zurückspringen. Einmal geprüfte Zeichen werden nicht erneut kontrolliert."],
     run: runConcentration },
 
-  { id: "trace", name: "Wegverfolgung", kind: "Visuelle Verfolgung", count: 8, perQ: 35,
+  { id: "trace", name: "Linienverfolgung", kind: "Visuelle Verfolgung", count: 8, perQ: 35,
     icon: ic('<path d="M2.5 4.5c5 0 5 11 10 11M2.5 15.5c5 0 5-11 10-11M12.5 4.5h5M12.5 15.5h5"/>'),
     desc: "Verschlungene Linien mit den Augen von links nach rechts verfolgen, ohne an Kreuzungen die Spur zu verlieren.",
     what: "Geprüft wird die visuelle Verfolgungsleistung: eine Linie im Blick zu behalten, während viele ähnliche Linien sie kreuzen – die Grundlage jedes Instrumentenscans.",
@@ -2052,7 +3102,71 @@ const MODULES = [
       "Kopf ruhig halten und nur die Augen bewegen – so bleibt die Spur stabil."],
     run: () => runQuiz({ count: 8, perQ: 35, next: () => traceQuestion() }) },
 
-  { id: "multitask", name: "Multitasking", kind: "Aufmerksamkeitsverteilung", count: 1, perQ: 95,
+
+  { id: "cube", name: "Würfelklappen", kind: "Räumliches Vorstellen", code: "PPT", count: 10, perQ: 40,
+    icon: ic('<path d="M10 2.2l6.6 3.8v7.6L10 17.4 3.4 13.6V6L10 2.2z"/><path d="M3.4 6L10 9.8 16.6 6M10 9.8v7.6"/>'),
+    desc: "Ein Würfelnetz gedanklich zusammenfalten und den passenden Würfel finden – lagerichtig, die Drehung der Zeichen zählt mit.",
+    what: "Der Würfelklappen-Test prüft das räumliche Vorstellungsvermögen: eine zweidimensionale Abwicklung in einen dreidimensionalen Körper zu überführen und dabei auch die Ausrichtung der Zeichen mitzudenken.",
+    tips: ["Wähle eine Fläche als Vorderseite und arbeite dich von dort aus vor – nicht jedes Mal neu ansetzen.",
+      "Gegenüberliegende Flächen liegen in der Abwicklung immer zwei Felder auseinander. Sie können nie gleichzeitig sichtbar sein – das schließt oft schon zwei Antworten aus.",
+      "Prüfe zuerst, welche Zeichen überhaupt zusammen sichtbar sein dürfen, und erst danach die Drehung.",
+      "Beim Weiterrücken nach oben kippt die Fläche über ihre Oberkante: Was in der Abwicklung oben war, zeigt danach nach hinten."],
+    run: () => runQuiz({ count: 10, perQ: 40, next: () => cubeQuestion() }) },
+
+  { id: "rms", name: "Akustisches Gedächtnis", kind: "Arbeitsgedächtnis", code: "RMS", count: 5, perQ: 0,
+    icon: ic('<path d="M4 8v4M7 5.5v9M10 3.5v13M13 6.5v7M16 8.8v2.4"/>'),
+    desc: "Vorgelesene Ziffernfolgen unbekannter Länge mitverfolgen und die zuletzt genannten Ziffern rückwärts wiedergeben.",
+    what: "Der Running Memory Span prüft das akustische Arbeitsgedächtnis. Die Folge endet ohne Ankündigung, deshalb müssen die letzten Ziffern durchgehend mitgeführt und beim Anhalten sofort umgekehrt abgerufen werden – genau wie eine Freigabe im Funk.",
+    tips: ["Führe ein gleitendes Fenster mit: Bei jeder neuen Ziffer fällt die älteste heraus. Die ganze Folge zu behalten ist weder nötig noch möglich.",
+      "Sprich die Ziffern innerlich in Zweier- oder Dreiergruppen mit, das stabilisiert das Fenster.",
+      "Übe von Anfang an rückwärts. Wer vorwärts merkt und erst am Ende dreht, verliert Zeit und Ziffern.",
+      "Ruhig bleiben, wenn eine Ziffer verloren geht – der Rest zählt weiterhin und wird anteilig bewertet."],
+    spec: lv => [({ 1: 4, 2: 5, 3: 6 }[lv]) + " Folgen", ({ 1: 4, 2: 5, 3: 6 }[lv]) + " Ziffern rückwärts"],
+    run: runRMS },
+
+  { id: "owt", name: "Optische Wahrnehmung", kind: "Selektive Aufmerksamkeit", code: "OWT", count: 5, perQ: 0,
+    icon: ic('<circle cx="10" cy="10" r="7"/><path d="M10 5.6V10l3 1.8"/>'),
+    desc: "Eine Tafel mit Uhren erscheint kurz. Nur die Uhren einer bestimmten Form und Helligkeit zählen – ihre Zeiten in Lesereihenfolge wiedergeben.",
+    what: "Geprüft wird selektive Wahrnehmung unter Zeitdruck: aus einer vollen Anzeige nur die relevanten Elemente herauszulösen, sie kurz zu speichern und geordnet wiederzugeben.",
+    tips: ["Erst die Regel festlegen, dann die Tafel ansehen. Wer alle Uhren liest und danach filtert, schafft es nicht.",
+      "Scanne stur in Lesereihenfolge, dann stimmt die Reihenfolge der Zeiten automatisch.",
+      "Uhrzeiten als Zahlenpaar merken (z. B. „3-7-11-5“) statt als Bild – das lässt sich besser behalten.",
+      "Form und Helligkeit sind zwei getrennte Merkmale. Beide müssen zutreffen."],
+    spec: lv => [({ 1: 4, 2: 5, 3: 6 }[lv]) + " Tafeln", ({ 1: 11, 2: 8, 3: 6 }[lv]) + " s je Tafel"],
+    run: runOWT },
+
+  { id: "skt", name: "Dreieckstest", kind: "Daueraufmerksamkeit", code: "SKT", count: 1, perQ: 0,
+    icon: ic('<path d="M10 3.4l7 12.2H3l7-12.2z"/>'),
+    desc: "Fortlaufend erscheinende Dreiecke nach zwei gemerkten Regeln mit dem jeweils vorherigen vergleichen – über die ganze Dauer gleichmäßig schnell.",
+    what: "Der Dreieckstest prüft Daueraufmerksamkeit und Regeltreue. Die Aufgabe selbst ist einfach; anspruchsvoll ist, über eine lange, monotone Strecke gleichmäßig schnell und fehlerfrei zu bleiben.",
+    tips: ["Die beiden Regeln vor dem Start verinnerlichen – während des Durchgangs bleibt keine Zeit zum Nachdenken.",
+      "Immer in derselben Reihenfolge prüfen: erst Regel A, dann Regel B. Ein fester Ablauf schlägt jedes Mal neu Hinsehen.",
+      "Es trifft nie mehr als eine Regel gleichzeitig zu. Sobald eine passt, kannst du sofort antworten.",
+      "Gleichmäßiges Tempo halten. Fehler entstehen fast immer dort, wo man schneller wird als nötig."],
+    spec: lv => ["fortlaufend", ({ 1: 80, 2: 100, 3: 120 }[lv]) + " s gesamt"],
+    run: runSKT },
+
+  { id: "route", name: "Wegfiguren", kind: "Räumliche Umorientierung", code: "WFG", count: 10, perQ: 30,
+    icon: ic('<path d="M3 16.5h4a3 3 0 003-3v-7a3 3 0 013-3h4"/><path d="M15 1.8l2.6 1.7L15 5.2M3 14.5l-1.4 2 1.4 2"/>'),
+    desc: "Einen gezeichneten Weg gedanklich abfahren und die Kurven aus Sicht des Fahrenden zählen – nicht aus Sicht des Blattes.",
+    what: "Der Wegfigurentest prüft die räumliche Umorientierung: die eigene Blickrichtung gedanklich mitzudrehen. „Rechts“ auf dem Papier ist nach einer Kurve nicht mehr „rechts“ für den Fahrenden.",
+    tips: ["Verfolge den Weg abschnittweise und drehe dabei gedanklich mit – nicht das Blatt betrachten, sondern mitfahren.",
+      "Fahrtrichtung nach unten kehrt links und rechts um. Genau dort entstehen die meisten Fehler.",
+      "Zähle laut oder mit den Fingern mit, statt am Ende zu schätzen.",
+      "Zeigt der Weg nach oben, stimmen Blatt und Fahrtrichtung überein – diese Abschnitte gehen schnell."],
+    run: () => runQuiz({ count: 10, perQ: 30, next: () => routeQuestion() }) },
+
+  { id: "logic", name: "Logisches Denken", kind: "Schlussfolgern · Ergänzung", count: 12, perQ: 45,
+    icon: ic('<circle cx="6" cy="6" r="3.2"/><circle cx="14" cy="6" r="3.2"/><path d="M10 10.5v2M6.5 12.5h7l-3.5 5.5-3.5-5.5z"/>'),
+    desc: "Zahlen- und Buchstabenreihen, Figurenmatrizen und formale Schlussfolgerungen – ergänzend zu den DLR-Untertests.",
+    what: "Schlussfolgerndes Denken ist kein eigener DLR-Untertest, gehört aber zu fast allen anderen Auswahlverfahren der Branche und trainiert das Erkennen von Regeln unter Zeitdruck.",
+    tips: ["Bei Reihen zuerst die Differenzen bilden. Ergeben die Differenzen selbst eine Reihe, ist die Aufgabe gelöst.",
+      "Bei Matrizen jedes Merkmal einzeln prüfen – Form, Anzahl, Füllung nacheinander statt alles auf einmal.",
+      "Bei Schlussfolgerungen zählt nur, was zwingend folgt. Was plausibel klingt, aber nicht erzwungen ist, ist falsch.",
+      "Die Umkehrung eines Satzes gilt nie automatisch: Aus „alle A sind B“ folgt nicht „alle B sind A“."],
+    run: () => runQuiz({ count: 12, perQ: 45, next: () => logicQuestion() }) },
+
+  { id: "multitask", name: "Multitasking", kind: "Aufmerksamkeitsverteilung", code: "MIC", count: 1, perQ: 95,
     icon: ic('<path d="M3 3h6v6H3zM11 3h6v6h-6zM3 11h6v6H3zM11 11h6v6h-6z"/>'),
     desc: "Drei Aufgaben gleichzeitig: einen driftenden Punkt auf Kurs halten, Systemwarnungen quittieren und nebenher rechnen.",
     what: "Der anspruchsvollste Teil des Verfahrens. Geprüft wird die Fähigkeit, Aufmerksamkeit bewusst zu verteilen und unter Belastung zu priorisieren – nicht, alles perfekt zu machen.",
@@ -2111,7 +3225,7 @@ function renderHome() {
   const hero = el("div", { class: "hero" });
   const left = el("div");
   left.appendChild(el("h1", { html: "Aufnahmetest<br><em>Cockpit-Nachwuchs</em>" }));
-  left.appendChild(el("p", { class: "sub", text: "Neun Trainingsmodule nach dem Muster der im deutschsprachigen Raum verbreiteten fliegerischen Eignungsverfahren – Kopfrechnen, technisches Verständnis, Englisch, Merkfähigkeit, räumliche Orientierung, Instrumentenablesen, Konzentration, Wegverfolgung und Multitasking. Alle Aufgaben werden bei jedem Durchgang neu erzeugt." }));
+  left.appendChild(el("p", { class: "sub", html: "Fünfzehn Trainingsmodule nach dem Muster der DLR-Berufsgrunduntersuchung – von Kopfrechnen, technischem Verständnis und Englisch über Würfelklappen, Wegfiguren und akustisches Gedächtnis bis zu Dauer&shy;aufmerksamkeit und Multitasking. Die Kürzel auf den Karten nennen den jeweiligen Untertest. Alle Aufgaben werden bei jedem Durchgang neu erzeugt." }));
   const cta = el("div", { class: "cta" });
   cta.appendChild(el("button", { class: "btn pri", text: "Prüfungssimulation starten", onclick: () => go("exam") }));
   cta.appendChild(el("button", { class: "btn", text: "Zufallsmodul", onclick: () => go("brief", pick(MODULES).id) }));
@@ -2153,7 +3267,8 @@ function renderHome() {
     const card = el("button", { class: "card mod", type: "button", onclick: () => go("brief", m.id) });
     card.appendChild(el("div", { class: "mh" }, [
       el("div", { class: "ico", html: m.icon }),
-      el("div", {}, [el("h3", { text: m.name }), el("div", { class: "kind", text: m.kind })])
+      el("div", {}, [el("h3", { text: m.name }),
+        el("div", { class: "kind", text: m.kind + (m.code ? "  ·  " + m.code : "") })])
     ]));
     card.appendChild(el("p", { text: m.desc }));
     const foot = el("div", { class: "mf" });
@@ -2166,7 +3281,7 @@ function renderHome() {
     grid.appendChild(card);
   });
   v.appendChild(grid);
-  v.appendChild(el("div", { class: "disc", html: "<b>Hinweis</b>Dies ist ein unabhängiges, privates Übungswerkzeug. Es steht in keiner Verbindung zu Austrian Airlines oder einem anderen Luftfahrtunternehmen und bildet kein offizielles Testverfahren ab. Aufbau und Aufgabentypen orientieren sich an den öffentlich beschriebenen, im deutschsprachigen Raum üblichen fliegerischen Eignungsverfahren. Inhalt, Umfang und Ablauf des tatsächlichen Auswahlverfahrens können davon abweichen – verbindlich sind ausschließlich die Angaben des Unternehmens. Alle Ergebnisse werden nur lokal im Browser gespeichert." }));
+  v.appendChild(el("div", { class: "disc", html: "<b>Hinweis</b>Dies ist ein unabhängiges, privates Übungswerkzeug. Es steht in keiner Verbindung zu Austrian Airlines, zum DLR oder einem anderen Unternehmen und ist kein offizielles Testverfahren. Aufbau und Aufgabentypen folgen den <b>öffentlich beschriebenen</b> Untertests der DLR-Berufsgrunduntersuchung; die tatsächlichen Testinhalte sind nicht öffentlich. Zeitvorgaben, Aufgabenmengen und Bewertung sind hier eigene Festlegungen und können vom Original abweichen – verbindlich sind ausschließlich die Angaben des jeweiligen Unternehmens. Die Firmenqualifikation (Gruppenübungen, Interviews, Simulatorflug) lässt sich in einer Web-App nicht abbilden. Alle Ergebnisse bleiben lokal im Browser." }));
 }
 
 /* ═══ Briefing ══════════════════════════════════════════════════════ */
@@ -2175,14 +3290,15 @@ function renderBriefing(id) {
   const v = view();
   const root = el("div", { class: "stage" });
   const card = el("div", { class: "card briefing" });
-  card.appendChild(el("div", { class: "kind", text: m.kind }));
+  card.appendChild(el("div", { class: "kind", text: m.kind + (m.code ? "  ·  " + m.code : "") }));
   card.appendChild(el("h1", { text: m.name }));
   card.appendChild(el("p", { text: m.what }));
 
   const specs = el("div", { class: "specs" });
   const fixedSecs = { concentration: { 1: 75, 2: 70, 3: 65 }, multitask: { 1: 70, 2: 95, 3: 120 } };
-  const s = [["Umfang", m.id === "concentration" ? "1 Zeichenfeld" : m.id === "multitask" ? "3 Kanäle" : m.count + " Aufgaben"],
-    ["Zeit", fixedSecs[m.id] ? fixedSecs[m.id][lvl()] + " s gesamt" : Math.round(m.perQ * LV().t) + " s je Aufgabe"],
+  const own = m.spec ? m.spec(lvl()) : null;
+  const s = [["Umfang", own ? own[0] : m.id === "concentration" ? "1 Zeichenfeld" : m.id === "multitask" ? "3 Kanäle" : m.count + " Aufgaben"],
+    ["Zeit", own ? own[1] : fixedSecs[m.id] ? fixedSecs[m.id][lvl()] + " s gesamt" : Math.round(m.perQ * LV().t) + " s je Aufgabe"],
     ["Stufe", LV().name], ["Bestwert", Store.best(m.id) === null ? "—" : Store.best(m.id) + " %"]];
   s.forEach(([k, val]) => specs.appendChild(el("div", {}, [el("u", { text: k }), el("b", { text: val })])));
   card.appendChild(specs);
@@ -2295,22 +3411,25 @@ function renderResult(m, res) {
 <script>
 /* ═══ Prüfungssimulation ════════════════════════════════════════════ */
 const EXAM_SETS = {
-  short: { name: "Kurzsimulation", note: "Fünf Module, rund 12 Minuten – für den regelmäßigen Formcheck.",
-    steps: [{ id: "math", count: 8, perQ: 40 }, { id: "spatial", count: 8, perQ: 18 }, { id: "memory" },
-            { id: "english", count: 8, perQ: 50 }, { id: "concentration" }] },
-  full: { name: "Vollständige Simulation", note: "Alle neun Module in einem Durchgang, rund 25–30 Minuten – ohne Rückmeldung zwischendurch, wie im Ernstfall.",
-    steps: [{ id: "math", count: 10, perQ: 40 }, { id: "tech", count: 10, perQ: 45 }, { id: "spatial", count: 10, perQ: 18 },
-            { id: "memory" }, { id: "english", count: 10, perQ: 50 }, { id: "instruments", count: 8, perQ: 22 },
-            { id: "trace", count: 6, perQ: 30 }, { id: "concentration" }, { id: "multitask" }] }
+  short: { name: "Kurzsimulation", note: "Sechs Module quer durch die Testbereiche, rund 15 Minuten – für den regelmäßigen Formcheck.",
+    steps: [{ id: "math", count: 8, perQ: 40 }, { id: "spatial", count: 8, perQ: 18 }, { id: "cube", count: 6, perQ: 35 },
+            { id: "rms" }, { id: "english", count: 8, perQ: 50 }, { id: "skt" }] },
+  full: { name: "Vollständige Simulation", note: "Alle fünfzehn Module in einem Durchgang, rund 55–65 Minuten – ohne Rückmeldung zwischendurch, wie im Ernstfall.",
+    steps: [{ id: "math", count: 10, perQ: 40 }, { id: "tech", count: 10, perQ: 45 }, { id: "cube", count: 8, perQ: 35 },
+            { id: "spatial", count: 8, perQ: 18 }, { id: "route", count: 8, perQ: 26 }, { id: "rms" },
+            { id: "english", count: 10, perQ: 50 }, { id: "owt" }, { id: "memory" }, { id: "logic", count: 8, perQ: 40 },
+            { id: "instruments", count: 8, perQ: 22 }, { id: "trace", count: 6, perQ: 30 },
+            { id: "skt" }, { id: "concentration" }, { id: "multitask" }] }
 };
 function examRunner(step) {
-  if (step.id === "memory") return runMemory;
-  if (step.id === "concentration") return runConcentration;
-  if (step.id === "multitask") return runMultitask;
+  const custom = { memory: runMemory, concentration: runConcentration, multitask: runMultitask,
+                   rms: runRMS, owt: runOWT, skt: runSKT };
+  if (custom[step.id]) return custom[step.id];
   const base = { count: step.count, perQ: step.perQ, feedback: false };
   if (step.id === "tech") { const used = new Set(); return () => runQuiz(Object.assign({}, base, { next: i => techQuestion(i, used) })); }
   if (step.id === "english") { const used = new Set(); return () => runQuiz(Object.assign({}, base, { next: i => engQuestion(i, used) })); }
-  const gens = { math: mathQuestion, spatial: attitudeQuestion, instruments: instrumentQuestion, trace: traceQuestion };
+  const gens = { math: mathQuestion, spatial: attitudeQuestion, instruments: instrumentQuestion,
+                 trace: traceQuestion, cube: cubeQuestion, route: routeQuestion, logic: logicQuestion };
   return () => runQuiz(Object.assign({}, base, { next: () => gens[step.id]() }));
 }
 
