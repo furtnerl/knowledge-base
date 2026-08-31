@@ -1,0 +1,2520 @@
+<title>Flight Deck Selection Trainer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* ── Tokens ─────────────────────────────────────────────────────────── */
+:root{
+  color-scheme: light dark;
+  --bg:#E4E9E8; --panel:#FFFFFF; --panel-2:#F0F4F3; --panel-3:#E7ECEB;
+  --line:#C4CFCD; --line-soft:#DAE2E0;
+  --ink:#0D1719; --ink-2:#3A4B4D; --ink-3:#6A7A7C;
+  --ok:#0A7A46; --ok-bg:#0a7a4618;
+  --caution:#8F5E00; --caution-bg:#8f5e0018;
+  --warn:#AF1119; --warn-bg:#af111918;
+  --data:#0A6874; --data-bg:#0a687418;
+  --target:#8A1C82;
+  --aua:#C8102E;
+  --sky:#1E6FA8; --ground:#7A5230;
+  --shadow:0 1px 2px rgba(13,23,25,.07), 0 10px 26px -14px rgba(13,23,25,.3);
+  --f-display:'Barlow Condensed','Arial Narrow',system-ui,sans-serif;
+  --f-body:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --f-mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  --r:3px; --maxw:1180px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#070B0D; --panel:#0E1417; --panel-2:#141B1F; --panel-3:#1A2328;
+    --line:#253137; --line-soft:#182126;
+    --ink:#E4EFEF; --ink-2:#A4B8BA; --ink-3:#6C8083;
+    --ok:#22DD84; --ok-bg:#22dd841f;
+    --caution:#FFB020; --caution-bg:#ffb0201f;
+    --warn:#FF4D45; --warn-bg:#ff4d451f;
+    --data:#4FD8E8; --data-bg:#4fd8e81f;
+    --target:#F06FDA;
+    --aua:#FF2E45;
+    --sky:#15507E; --ground:#5A3B22;
+    --shadow:0 1px 2px rgba(0,0,0,.5), 0 12px 30px -16px rgba(0,0,0,.9);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#070B0D; --panel:#0E1417; --panel-2:#141B1F; --panel-3:#1A2328;
+  --line:#253137; --line-soft:#182126;
+  --ink:#E4EFEF; --ink-2:#A4B8BA; --ink-3:#6C8083;
+  --ok:#22DD84; --ok-bg:#22dd841f;
+  --caution:#FFB020; --caution-bg:#ffb0201f;
+  --warn:#FF4D45; --warn-bg:#ff4d451f;
+  --data:#4FD8E8; --data-bg:#4fd8e81f;
+  --target:#F06FDA;
+  --aua:#FF2E45;
+  --sky:#15507E; --ground:#5A3B22;
+  --shadow:0 1px 2px rgba(0,0,0,.5), 0 12px 30px -16px rgba(0,0,0,.9);
+}
+
+/* ── Base ───────────────────────────────────────────────────────────── */
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{margin:0;font-family:var(--f-display);font-weight:600;letter-spacing:.01em;text-wrap:balance;line-height:1.1}
+p{margin:0}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+:focus-visible{outline:2px solid var(--data);outline-offset:2px}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.lbl{font-family:var(--f-display);font-weight:600;text-transform:uppercase;letter-spacing:.13em;font-size:12px;color:var(--ink-3);line-height:1}
+.hide{display:none!important}
+
+/* ── Chrome ─────────────────────────────────────────────────────────── */
+.wrap{max-width:var(--maxw);margin:0 auto;padding:0 20px}
+header.top{background:var(--panel);border-bottom:1px solid var(--line)}
+.topbar{display:flex;align-items:center;gap:14px;height:56px}
+.mark{display:flex;align-items:center;gap:9px;min-width:0}
+.flag{width:15px;height:26px;display:flex;flex-direction:column;border:1px solid var(--line)}
+.flag i{flex:1;background:var(--aua)}
+.flag i:nth-child(2){background:var(--panel)}
+.mark b{display:block;font-family:var(--f-display);font-weight:700;font-size:19px;letter-spacing:.05em;text-transform:uppercase;line-height:1.05;overflow-wrap:anywhere}
+.mark s{display:block;text-decoration:none;font-family:var(--f-display);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3);line-height:1.4}
+.topbar nav{margin-left:auto;display:flex;gap:2px}
+.topbar nav button{font-family:var(--f-display);text-transform:uppercase;letter-spacing:.11em;font-size:13px;font-weight:600;color:var(--ink-3);padding:7px 11px;border-radius:var(--r)}
+.topbar nav button:hover{color:var(--ink);background:var(--panel-2)}
+.topbar nav button[aria-current="true"]{color:var(--ink);background:var(--panel-3)}
+.iconbtn{width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--line);border-radius:var(--r);color:var(--ink-2)}
+.iconbtn:hover{color:var(--ink);border-color:var(--ink-3)}
+
+/* status strip = EFIS header */
+.strip{background:var(--panel-2);border-bottom:1px solid var(--line);font-family:var(--f-mono);font-size:12px}
+.strip .wrap{display:flex;align-items:center;gap:0;height:32px;overflow-x:auto;scrollbar-width:none}
+.strip .wrap::-webkit-scrollbar{display:none}
+.sitem{display:flex;align-items:baseline;gap:7px;padding:0 15px;border-right:1px solid var(--line-soft);white-space:nowrap;height:100%;align-items:center}
+.sitem:first-child{padding-left:0}
+.sitem u{text-decoration:none;font-family:var(--f-display);font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3)}
+.sitem b{font-weight:500;color:var(--data);font-variant-numeric:tabular-nums}
+.sitem.warnv b{color:var(--warn)}
+.sitem.cautv b{color:var(--caution)}
+main{padding:26px 0 70px}
+
+/* ── Cards / buttons ────────────────────────────────────────────────── */
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-family:var(--f-display);text-transform:uppercase;letter-spacing:.12em;font-weight:600;font-size:14px;padding:10px 20px;border-radius:var(--r);border:1px solid var(--line);background:var(--panel);color:var(--ink);transition:background .12s,border-color .12s,color .12s}
+.btn:hover{border-color:var(--ink-3);background:var(--panel-2)}
+.btn.pri{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+.btn.pri:hover{background:var(--ink-2);border-color:var(--ink-2)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.sm{font-size:12.5px;padding:7px 13px}
+.btn.danger{color:var(--warn);border-color:var(--warn)}
+.btn.danger:hover{background:var(--warn-bg)}
+
+/* ── Home ───────────────────────────────────────────────────────────── */
+.hero{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:34px;align-items:start;margin-bottom:34px}
+.hero h1{font-size:clamp(34px,5.2vw,54px);font-weight:700;letter-spacing:-.005em;text-transform:uppercase}
+.hero h1 em{font-style:normal;color:var(--ink-3);display:block}
+.hero .sub{margin-top:14px;color:var(--ink-2);max-width:56ch}
+.hero .cta{display:flex;gap:10px;margin-top:22px;flex-wrap:wrap}
+.dash{padding:16px 18px}
+.dash .row{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:8px 0;border-bottom:1px solid var(--line-soft)}
+.dash .row:last-child{border:0;padding-bottom:0}
+.dash .row b{font-family:var(--f-mono);font-size:19px;font-weight:500;color:var(--data);font-variant-numeric:tabular-nums}
+.dash .row span{font-family:var(--f-display);text-transform:uppercase;letter-spacing:.1em;font-size:12.5px;color:var(--ink-3)}
+.dash h3{font-size:17px;text-transform:uppercase;letter-spacing:.11em;padding-bottom:10px;border-bottom:1px solid var(--line);margin-bottom:4px}
+
+.sechead{display:flex;align-items:center;gap:14px;margin:0 0 16px}
+.sechead h2{font-size:20px;text-transform:uppercase;letter-spacing:.12em}
+.sechead .rule{flex:1;height:1px;background:var(--line)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(268px,1fr));gap:14px}
+.mod{padding:16px 17px 15px;text-align:left;display:flex;flex-direction:column;gap:9px;position:relative;transition:border-color .13s,transform .13s}
+.mod:hover{border-color:var(--ink-3);transform:translateY(-1px)}
+.mod .mh{display:flex;align-items:flex-start;gap:11px}
+.mod .ico{width:38px;height:38px;flex-shrink:0;border:1px solid var(--line);border-radius:var(--r);display:grid;place-items:center;color:var(--data);background:var(--panel-2)}
+.mod h3{font-size:17px;letter-spacing:.05em;text-transform:uppercase;overflow-wrap:anywhere;hyphens:auto}
+.mod .kind{font-family:var(--f-display);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin-top:2px}
+.mod p{color:var(--ink-2);font-size:13.5px;line-height:1.5}
+.mod .mf{display:flex;align-items:center;gap:10px;margin-top:auto;padding-top:9px;border-top:1px solid var(--line-soft);font-family:var(--f-mono);font-size:11.5px;color:var(--ink-3)}
+.mod .best{margin-left:auto;color:var(--ok);font-weight:500}
+.bar{height:3px;background:var(--panel-3);border-radius:2px;overflow:hidden;flex:1;max-width:80px}
+.bar i{display:block;height:100%;background:var(--ok)}
+</style>
+<style>
+/* ── Test surface ───────────────────────────────────────────────────── */
+.stage{max-width:860px;margin:0 auto}
+.stage.wide{max-width:1020px}
+.briefing{padding:26px 28px}
+.briefing h1{font-size:30px;text-transform:uppercase;letter-spacing:.05em}
+.briefing .kind{font-family:var(--f-display);font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--aua);margin-bottom:6px}
+.briefing p{color:var(--ink-2);margin-top:12px;max-width:66ch}
+.briefing ul{color:var(--ink-2);margin:12px 0 0;padding-left:18px;max-width:66ch}
+.briefing li{margin:5px 0}
+.specs{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r);margin:20px 0}
+.specs div{background:var(--panel);padding:10px 12px}
+.specs u{text-decoration:none;display:block;font-family:var(--f-display);font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3)}
+.specs b{font-family:var(--f-mono);font-size:16px;font-weight:500;color:var(--ink)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.seg button{font-family:var(--f-display);text-transform:uppercase;letter-spacing:.1em;font-size:12.5px;font-weight:600;padding:7px 14px;color:var(--ink-3);border-right:1px solid var(--line)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--panel)}
+
+.qhead{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.qcount{font-family:var(--f-mono);font-size:12.5px;color:var(--ink-3)}
+.pips{display:flex;gap:3px;flex-wrap:wrap}
+.pips i{width:15px;height:4px;border-radius:1px;background:var(--panel-3);border:1px solid var(--line-soft)}
+.pips i.ok{background:var(--ok);border-color:var(--ok)}
+.pips i.no{background:var(--warn);border-color:var(--warn)}
+.pips i.now{background:var(--data);border-color:var(--data)}
+.clock{margin-left:auto;font-family:var(--f-mono);font-size:19px;font-weight:500;color:var(--data);font-variant-numeric:tabular-nums}
+.clock.low{color:var(--caution)}
+.clock.crit{color:var(--warn)}
+.tbar{height:3px;background:var(--panel-3);border-radius:2px;overflow:hidden;margin-bottom:18px}
+.tbar i{display:block;height:100%;background:var(--data);transition:width .25s linear}
+.tbar i.low{background:var(--caution)}
+.tbar i.crit{background:var(--warn)}
+
+.qcard{padding:24px 26px}
+.qtext{font-size:19px;line-height:1.5;color:var(--ink)}
+.qtext.mono{font-size:17px}
+.qsub{color:var(--ink-3);font-size:13.5px;margin-top:7px}
+.opts{display:grid;gap:8px;margin-top:20px}
+.opts.two{grid-template-columns:1fr 1fr}
+.opt{display:flex;align-items:center;gap:12px;padding:12px 15px;border:1px solid var(--line);border-radius:var(--r);background:var(--panel);text-align:left;transition:border-color .12s,background .12s;width:100%}
+.opt:hover:not(:disabled){border-color:var(--ink-3);background:var(--panel-2)}
+.opt kbd{font-family:var(--f-mono);font-size:11.5px;width:21px;height:21px;flex-shrink:0;display:grid;place-items:center;border:1px solid var(--line);border-radius:2px;color:var(--ink-3);background:var(--panel-2)}
+.opt .t{flex:1;font-size:15.5px}
+.opt.num .t{font-family:var(--f-mono);font-size:16.5px;font-variant-numeric:tabular-nums}
+.opt.right{border-color:var(--ok);background:var(--ok-bg)}
+.opt.right kbd{border-color:var(--ok);color:var(--ok)}
+.opt.wrong{border-color:var(--warn);background:var(--warn-bg)}
+.opt.wrong kbd{border-color:var(--warn);color:var(--warn)}
+.opt .vd{font-family:var(--f-display);font-size:11px;letter-spacing:.13em;text-transform:uppercase}
+.opt.pic{flex-direction:column;gap:0;padding:13px 12px;position:relative}
+.opt.pic kbd{position:absolute;left:11px;top:11px}
+.opt.pic .t{flex:none;display:flex;justify-content:center;width:100%}
+.opt.pic .vd{position:absolute;right:12px;top:13px}
+.opt.right .vd{color:var(--ok)}
+.opt.wrong .vd{color:var(--warn)}
+.expl{margin-top:16px;padding:13px 15px;border-left:2px solid var(--data);background:var(--data-bg);border-radius:0 var(--r) var(--r) 0;font-size:14px;color:var(--ink-2)}
+.expl b{font-family:var(--f-display);text-transform:uppercase;letter-spacing:.13em;font-size:11px;color:var(--data);display:block;margin-bottom:3px}
+.qfoot{display:flex;align-items:center;gap:12px;margin-top:18px}
+.hintk{font-family:var(--f-mono);font-size:11.5px;color:var(--ink-3);margin-left:auto}
+
+/* numeric entry */
+.numin{display:flex;align-items:center;gap:10px;margin-top:20px}
+.numin input{font-family:var(--f-mono);font-size:22px;padding:10px 14px;width:200px;background:var(--panel-2);border:1px solid var(--line);border-radius:var(--r);color:var(--ink)}
+.numin .unit{font-family:var(--f-display);text-transform:uppercase;letter-spacing:.12em;color:var(--ink-3);font-size:14px}
+
+/* ── Results ────────────────────────────────────────────────────────── */
+.res{padding:26px 28px}
+.res .verdict{display:flex;align-items:center;gap:16px;padding-bottom:18px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.ring{width:96px;height:96px;flex-shrink:0}
+.res h1{font-size:27px;text-transform:uppercase;letter-spacing:.05em}
+.res .vsub{color:var(--ink-2);font-size:14px;margin-top:4px;max-width:52ch}
+.grade{display:inline-block;font-family:var(--f-display);font-size:12px;letter-spacing:.15em;text-transform:uppercase;padding:3px 9px;border:1px solid currentColor;border-radius:var(--r);margin-bottom:7px}
+.g-ok{color:var(--ok)} .g-cau{color:var(--caution)} .g-warn{color:var(--warn)}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(115px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r);margin:20px 0}
+.metrics div{background:var(--panel);padding:11px 13px}
+.metrics u{text-decoration:none;display:block;font-family:var(--f-display);font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3)}
+.metrics b{font-family:var(--f-mono);font-size:21px;font-weight:500;font-variant-numeric:tabular-nums}
+.review{margin-top:6px;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.review .rw{display:flex;gap:12px;padding:11px 14px;border-bottom:1px solid var(--line-soft);font-size:13.5px;align-items:flex-start}
+.review .rw:last-child{border:0}
+.review .rw .st{font-family:var(--f-mono);font-size:11px;flex-shrink:0;width:16px;text-align:center;padding-top:2px}
+.review .rw.ok .st{color:var(--ok)} .review .rw.no .st{color:var(--warn)}
+.review .rw .qq{color:var(--ink)}
+.review .rw .aa{color:var(--ink-3);font-size:12.5px;margin-top:2px;font-family:var(--f-mono)}
+.sparkrow{display:flex;align-items:center;gap:12px;margin-top:14px}
+
+/* ── Instruments / canvas surfaces ──────────────────────────────────── */
+.instwrap{display:flex;justify-content:center;padding:8px 0 4px}
+.sixpack{display:grid;grid-template-columns:repeat(3,auto);gap:14px 16px;justify-content:center;padding:4px 0 10px;width:max-content;margin:0 auto}
+.gridwrap{overflow-x:auto;padding-bottom:6px}
+.memtable{border-collapse:collapse;width:100%;font-family:var(--f-mono);font-size:14px}
+.memtable th{font-family:var(--f-display);font-size:11.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3);text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);font-weight:600}
+.memtable td{padding:9px 12px;border-bottom:1px solid var(--line-soft);color:var(--ink);font-variant-numeric:tabular-nums}
+.memtable tr:last-child td{border-bottom:0}
+.memtable td:first-child{color:var(--data);font-weight:500}
+.scan{display:grid;gap:4px;justify-content:center;user-select:none}
+.scan button{width:40px;height:42px;display:grid;place-items:center;font-family:var(--f-mono);font-size:16px;border:1px solid var(--line-soft);border-radius:2px;background:var(--panel-2);color:var(--ink);line-height:1}
+.scan button:hover{border-color:var(--ink-3)}
+.scan button.hit{background:var(--ok-bg);border-color:var(--ok);color:var(--ok)}
+.scan button.miss{background:var(--warn-bg);border-color:var(--warn);color:var(--warn)}
+.scan button.shown{background:var(--caution-bg);border-color:var(--caution);color:var(--caution)}
+.target-legend{display:flex;align-items:center;justify-content:center;gap:14px;padding:12px;background:var(--panel-2);border:1px solid var(--line);border-radius:var(--r);margin-bottom:16px;flex-wrap:wrap}
+.target-legend .tg{width:40px;height:42px;display:grid;place-items:center;font-family:var(--f-mono);font-size:17px;border:1px solid var(--data);color:var(--data);border-radius:2px}
+
+/* multitask */
+.mt{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:14px}
+.mtpanel{padding:12px 14px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r)}
+.mtpanel .lbl{margin-bottom:9px}
+.gauges{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.gauge{text-align:center}
+.gauge canvas{display:block;width:100%;height:auto}
+.gauge .gk{font-family:var(--f-mono);font-size:11px;color:var(--ink-3);margin-top:3px}
+.gauge.alert .gk{color:var(--warn)}
+.mtmath{min-height:92px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:9px;text-align:center}
+.mtmath .q{font-family:var(--f-mono);font-size:23px;color:var(--ink)}
+.mtkeys{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+.mtkeys button{font-family:var(--f-mono);font-size:14px;padding:7px 13px;border:1px solid var(--line);border-radius:var(--r);background:var(--panel-2);min-width:44px}
+.mtkeys button:hover{border-color:var(--ink-3)}
+.chanbars{display:grid;gap:7px;margin-top:2px}
+.chanbar{display:flex;align-items:center;gap:9px;font-family:var(--f-mono);font-size:11.5px;color:var(--ink-3)}
+.chanbar .nm{width:78px;flex-shrink:0;font-family:var(--f-display);text-transform:uppercase;letter-spacing:.1em;font-size:11px}
+.chanbar .bar{max-width:none}
+.dpad{display:grid;grid-template-columns:repeat(3,44px);grid-template-rows:repeat(2,44px);gap:5px;justify-content:center;margin-top:10px}
+.dpad button{border:1px solid var(--line);border-radius:var(--r);background:var(--panel-2);display:grid;place-items:center;color:var(--ink-2)}
+.dpad button:active{background:var(--panel-3);color:var(--data)}
+
+/* stats */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+.strow{display:flex;align-items:center;gap:12px;padding:11px 14px;border-bottom:1px solid var(--line-soft)}
+.strow:last-child{border:0}
+.strow .nm{flex:1;min-width:0}
+.strow .nm b{display:block;font-family:var(--f-display);text-transform:uppercase;letter-spacing:.07em;font-size:15px;font-weight:600}
+.strow .nm u{text-decoration:none;font-family:var(--f-mono);font-size:11.5px;color:var(--ink-3)}
+.strow .sc{font-family:var(--f-mono);font-size:19px;font-weight:500;font-variant-numeric:tabular-nums;width:56px;text-align:right}
+.empty{padding:34px 20px;text-align:center;color:var(--ink-3)}
+.empty p{max-width:44ch;margin:8px auto 0;font-size:14px}
+
+/* misc */
+.note{font-size:12.5px;color:var(--ink-3);line-height:1.5}
+.disc{margin-top:34px;padding:15px 17px;border:1px solid var(--line);border-left:2px solid var(--caution);border-radius:0 var(--r) var(--r) 0;background:var(--panel);font-size:12.5px;color:var(--ink-3);line-height:1.6}
+.disc b{font-family:var(--f-display);text-transform:uppercase;letter-spacing:.13em;font-size:11px;color:var(--caution);display:block;margin-bottom:4px}
+.countdown{display:grid;place-items:center;padding:60px 20px;text-align:center}
+.countdown .n{font-family:var(--f-mono);font-size:76px;font-weight:500;color:var(--data);line-height:1}
+.countdown p{color:var(--ink-3);margin-top:10px;font-family:var(--f-display);text-transform:uppercase;letter-spacing:.16em;font-size:13px}
+.examline{display:flex;align-items:center;gap:11px;padding:10px 0;border-bottom:1px solid var(--line-soft);font-size:14px}
+.examline:last-child{border:0}
+.examline .ix{font-family:var(--f-mono);font-size:12px;color:var(--ink-3);width:22px}
+.examline .st{margin-left:auto;font-family:var(--f-display);text-transform:uppercase;letter-spacing:.12em;font-size:11px;color:var(--ink-3)}
+.examline.done .st{color:var(--ok)}
+.examline.now{color:var(--data)}
+.examline.now .st{color:var(--data)}
+
+@media (max-width:840px){
+  .hero{grid-template-columns:1fr;gap:22px}
+  .mt{grid-template-columns:1fr}
+  .opts.two{grid-template-columns:1fr}
+}
+@media (max-width:560px){
+  .wrap{padding:0 14px}
+  .topbar{height:auto;padding:10px 0;flex-wrap:wrap;gap:10px}
+  .topbar .mark{flex:1 1 auto}
+  .mark b{font-size:15px;letter-spacing:.03em}
+  .mark s{font-size:9.5px;letter-spacing:.1em}
+  .flag{width:12px;height:21px}
+  #themeBtn{order:2;flex-shrink:0}
+  .topbar nav{order:3;margin-left:0;width:100%;overflow-x:auto}
+  .topbar nav button{font-size:12px;padding:6px 9px;white-space:nowrap}
+  .qcard,.briefing,.res{padding:18px 16px}
+  .qtext{font-size:17px}
+}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+</style>
+<header class="top">
+  <div class="wrap topbar">
+    <div class="mark">
+      <div class="flag" aria-hidden="true"><i></i><i></i><i></i></div>
+      <div>
+        <b>Flight Deck Selection Trainer</b>
+        <s>Austrian Airlines &middot; Vorbereitung Auswahlverfahren</s>
+      </div>
+    </div>
+    <nav id="nav">
+      <button data-go="home" aria-current="true">Module</button>
+      <button data-go="exam">Prüfungssimulation</button>
+      <button data-go="stats">Fortschritt</button>
+    </nav>
+    <button class="iconbtn" id="themeBtn" title="Tag-/Nachtdarstellung wechseln" aria-label="Tag-/Nachtdarstellung wechseln">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="3.2"/><path d="M8 .8v2M8 13.2v2M.8 8h2M13.2 8h2M2.9 2.9l1.4 1.4M11.7 11.7l1.4 1.4M13.1 2.9l-1.4 1.4M4.3 11.7l-1.4 1.4"/></svg>
+    </button>
+  </div>
+</header>
+<div class="strip"><div class="wrap" id="strip"></div></div>
+<main><div class="wrap" id="view"></div></main>
+<script>
+"use strict";
+/* ═══ Utilities ═════════════════════════════════════════════════════ */
+const $ = (s, r) => (r || document).querySelector(s);
+const el = (tag, attrs, kids) => {
+  const n = document.createElement(tag);
+  if (attrs) for (const k in attrs) {
+    if (k === "class") n.className = attrs[k];
+    else if (k === "html") n.innerHTML = attrs[k];
+    else if (k === "text") n.textContent = attrs[k];
+    else if (k.startsWith("on")) n.addEventListener(k.slice(2), attrs[k]);
+    else if (attrs[k] !== null && attrs[k] !== undefined) n.setAttribute(k, attrs[k]);
+  }
+  if (kids) (Array.isArray(kids) ? kids : [kids]).forEach(c => c && n.appendChild(c));
+  return n;
+};
+const ri = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const shuffle = a => { const c = a.slice(); for (let i = c.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [c[i], c[j]] = [c[j], c[i]]; } return c; };
+const sample = (a, n) => shuffle(a).slice(0, n);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const round = (v, d) => { const f = Math.pow(10, d || 0); return Math.round(v * f) / f; };
+const pad = (n, w) => String(n).padStart(w || 2, "0");
+const fmtClock = ms => { const s = Math.max(0, Math.ceil(ms / 1000)); return pad(Math.floor(s / 60)) + ":" + pad(s % 60); };
+const fmtDur = ms => { const s = Math.round(ms / 1000); return s < 60 ? s + " s" : Math.floor(s / 60) + " min " + pad(s % 60) + " s"; };
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+/* ═══ Persistence ═══════════════════════════════════════════════════ */
+const KEY = "aua-fdst-v1";
+const Store = {
+  data: { runs: [], settings: { level: 2, theme: null }, version: 1 },
+  load() {
+    try {
+      const raw = localStorage.getItem(KEY);
+      if (raw) {
+        const p = JSON.parse(raw);
+        if (p && typeof p === "object") {
+          this.data.runs = Array.isArray(p.runs) ? p.runs : [];
+          this.data.settings = Object.assign(this.data.settings, p.settings || {});
+        }
+      }
+    } catch (e) { /* Speicher nicht verfügbar – Training läuft, Verlauf wird nicht gesichert */ }
+    return this.data;
+  },
+  save() { try { localStorage.setItem(KEY, JSON.stringify(this.data)); } catch (e) {} },
+  addRun(r) {
+    this.data.runs.push(Object.assign({ at: Date.now() }, r));
+    if (this.data.runs.length > 400) this.data.runs = this.data.runs.slice(-400);
+    this.save();
+  },
+  runsFor(id) { return this.data.runs.filter(r => r.module === id); },
+  best(id) { const r = this.runsFor(id); return r.length ? Math.max.apply(null, r.map(x => x.score)) : null; },
+  last(id) { const r = this.runsFor(id); return r.length ? r[r.length - 1].score : null; },
+  avg(id) { const r = this.runsFor(id).slice(-5); return r.length ? Math.round(r.reduce((s, x) => s + x.score, 0) / r.length) : null; },
+  totalTime() { return this.data.runs.reduce((s, r) => s + (r.timeMs || 0), 0); },
+  set(k, v) { this.data.settings[k] = v; this.save(); },
+  reset() { this.data.runs = []; this.save(); }
+};
+Store.load();
+
+/* ═══ Theme ═════════════════════════════════════════════════════════ */
+function applyTheme() {
+  const t = Store.data.settings.theme;
+  if (t) document.documentElement.setAttribute("data-theme", t);
+  else document.documentElement.removeAttribute("data-theme");
+}
+applyTheme();
+$("#themeBtn").addEventListener("click", () => {
+  const cur = document.documentElement.getAttribute("data-theme");
+  const sysDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  const now = cur ? cur : (sysDark ? "dark" : "light");
+  Store.set("theme", now === "dark" ? "light" : "dark");
+  applyTheme();
+});
+
+/* ═══ Status strip ══════════════════════════════════════════════════ */
+let stripItems = [];
+function setStrip(items) { stripItems = items || []; renderStrip(); }
+function renderStrip() {
+  const s = $("#strip");
+  s.innerHTML = "";
+  const base = [{ k: "Modus", v: State.mode }, { k: "Stufe", v: LEVELS[Store.data.settings.level].name }];
+  base.concat(stripItems).forEach(it => {
+    s.appendChild(el("div", { class: "sitem " + (it.tone === "warn" ? "warnv" : it.tone === "caution" ? "cautv" : "") }, [
+      el("u", { text: it.k }), el("b", { text: it.v })
+    ]));
+  });
+}
+
+/* ═══ Levels ════════════════════════════════════════════════════════ */
+const LEVELS = {
+  1: { name: "Aufbau", t: 1.35, hard: 0, desc: "Mehr Zeit pro Aufgabe, einfachere Zahlen – zum Einarbeiten." },
+  2: { name: "Prüfung", t: 1.0, hard: 1, desc: "Zeitdruck und Aufgabenniveau wie im Auswahlverfahren üblich." },
+  3: { name: "Übersoll", t: 0.78, hard: 2, desc: "Deutlich über Prüfungsniveau – trainiert Reserve." }
+};
+const LV = () => LEVELS[Store.data.settings.level];
+const lvl = () => Store.data.settings.level;
+
+/* ═══ App state / router ════════════════════════════════════════════ */
+const State = { mode: "BEREIT", route: "home", running: null };
+const view = () => $("#view");
+function clearView() {
+  if (State.running && State.running.abort) { try { State.running.abort(); } catch (e) {} }
+  State.running = null;
+  view().innerHTML = "";
+  document.onkeydown = null;
+}
+function go(route, arg) {
+  clearView();
+  State.route = route;
+  State.mode = route === "home" ? "BEREIT" : route === "stats" ? "AUSWERTUNG" : State.mode;
+  Array.from($("#nav").children).forEach(b => b.setAttribute("aria-current", String(b.dataset.go === route)));
+  if (route === "home") { State.mode = "BEREIT"; setStrip([]); renderHome(); }
+  else if (route === "stats") { setStrip([]); renderStats(); }
+  else if (route === "exam") { State.mode = "BEREIT"; setStrip([]); renderExamIntro(); }
+  else if (route === "brief") { State.mode = "BRIEFING"; setStrip([]); renderBriefing(arg); }
+  window.scrollTo(0, 0);
+  renderStrip();
+}
+$("#nav").addEventListener("click", e => { const b = e.target.closest("button"); if (b) go(b.dataset.go); });
+</script>
+<script>
+/* ═══ Quiz engine ═══════════════════════════════════════════════════
+   Generic runner for every question-based module. A module supplies a
+   generator `next(i)` returning { stem, render?, options[], explain?, ... }.
+   Resolves with { correct, total, score, timeMs, detail[] }.                */
+function runQuiz(cfg) {
+  return new Promise(resolve => {
+    const total = cfg.count;
+    const perQ = Math.round((cfg.perQ || 30) * LV().t * 1000);
+    const feedback = cfg.feedback !== false;
+    const detail = [];
+    let i = 0, correct = 0, startAll = performance.now(), tick = null, qStart = 0, answered = false, aborted = false;
+
+    const root = el("div", { class: "stage" });
+    const head = el("div", { class: "qhead" });
+    const pips = el("div", { class: "pips" });
+    const cnt = el("div", { class: "qcount" });
+    const clock = el("div", { class: "clock mono" });
+    head.append(cnt, pips, clock);
+    const tbar = el("div", { class: "tbar" }, [el("i")]);
+    const card = el("div", { class: "card qcard" });
+    root.append(head, tbar, card);
+    view().innerHTML = "";
+    view().appendChild(root);
+
+    for (let p = 0; p < total; p++) pips.appendChild(el("i"));
+
+    State.running = { abort() { aborted = true; clearInterval(tick); } };
+
+    function updateClock() {
+      const left = perQ - (performance.now() - qStart);
+      const frac = clamp(left / perQ, 0, 1);
+      clock.textContent = fmtClock(left);
+      const bar = tbar.firstChild;
+      bar.style.width = (frac * 100).toFixed(1) + "%";
+      const cls = frac < .17 ? "crit" : frac < .34 ? "low" : "";
+      clock.className = "clock mono " + cls;
+      bar.className = cls;
+      setStrip([
+        { k: "Aufgabe", v: (i + 1) + "/" + total },
+        { k: "Richtig", v: correct + "/" + Math.max(0, i) },
+        { k: "Restzeit", v: fmtClock(left), tone: frac < .17 ? "warn" : frac < .34 ? "caution" : "" }
+      ]);
+      if (left <= 0 && !answered) answer(-1, true);
+    }
+
+    let cur = null, optNodes = [];
+    function nextQ() {
+      if (aborted) return;
+      if (i >= total) return finish();
+      answered = false;
+      redrawFns = [];
+      cur = cfg.next(i);
+      card.innerHTML = "";
+      cnt.textContent = "AUFGABE " + pad(i + 1) + " / " + pad(total);
+      Array.from(pips.children).forEach((p, ix) => { if (ix === i) p.classList.add("now"); });
+
+      if (cur.eyebrow) card.appendChild(el("div", { class: "lbl", text: cur.eyebrow, style: "margin-bottom:10px" }));
+      if (cur.render) { const holder = el("div"); card.appendChild(holder); cur.render(holder); }
+      if (cur.stem) card.appendChild(el("div", { class: "qtext" + (cur.monoStem ? " mono" : ""), html: cur.stem }));
+      if (cur.sub) card.appendChild(el("div", { class: "qsub", text: cur.sub }));
+
+      const wrap = el("div", { class: "opts" + (cur.optionLayout === "two" ? " two" : "") });
+      optNodes = [];
+      cur.options.forEach((o, ix) => {
+        const b = el("button", { class: "opt" + (cur.numericOpts ? " num" : "") + (o.render ? " pic" : ""), type: "button", onclick: () => answer(ix) });
+        b.appendChild(el("kbd", { text: String(ix + 1) }));
+        const t = el("div", { class: "t" });
+        if (o.render) o.render(t); else t.innerHTML = o.t;
+        b.appendChild(t);
+        b.appendChild(el("div", { class: "vd" }));
+        wrap.appendChild(b); optNodes.push(b);
+      });
+      card.appendChild(wrap);
+      card.appendChild(el("div", { class: "qfoot" }, [el("div", { class: "hintk", text: "Tasten 1–" + cur.options.length + " zum Antworten" })]));
+
+      qStart = performance.now();
+      clearInterval(tick); tick = setInterval(updateClock, 200); updateClock();
+    }
+
+    function answer(chosen, timeout) {
+      if (answered) return;
+      answered = true;
+      clearInterval(tick);
+      const took = performance.now() - qStart;
+      const rightIx = cur.options.findIndex(o => o.ok);
+      const ok = chosen === rightIx;
+      if (ok) correct++;
+      detail.push({
+        q: cur.plain || (cur.stem || "").replace(/<[^>]+>/g, ""),
+        your: timeout ? "— (Zeit abgelaufen)" : (cur.options[chosen].plain || cur.options[chosen].t || "Antwort " + (chosen + 1)),
+        right: cur.options[rightIx].plain || cur.options[rightIx].t || "Antwort " + (rightIx + 1),
+        ok, ms: took
+      });
+      const pip = pips.children[i];
+      pip.classList.remove("now"); pip.classList.add(ok ? "ok" : "no");
+
+      if (!feedback) { i++; setTimeout(nextQ, 90); return; }
+
+      optNodes.forEach((n, ix) => {
+        n.disabled = true;
+        if (ix === rightIx) { n.classList.add("right"); $(".vd", n).textContent = "Richtig"; }
+        if (ix === chosen && !ok) { n.classList.add("wrong"); $(".vd", n).textContent = "Deine Wahl"; }
+      });
+      if (cur.explain) card.appendChild(el("div", { class: "expl", html: "<b>Lösungsweg</b>" + cur.explain }));
+      const foot = $(".qfoot", card);
+      foot.innerHTML = "";
+      const nb = el("button", { class: "btn pri", text: i + 1 >= total ? "Auswertung" : "Weiter", onclick: () => { i++; nextQ(); } });
+      foot.append(nb, el("div", { class: "hintk", text: "Enter" }));
+      nb.focus();
+    }
+
+    document.onkeydown = e => {
+      if (e.key === "Escape") { clearInterval(tick); go("home"); return; }
+      if (!answered) {
+        const n = parseInt(e.key, 10);
+        if (n >= 1 && n <= (cur ? cur.options.length : 0)) { e.preventDefault(); answer(n - 1); }
+      } else if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault(); const b = $(".qfoot .btn", card); if (b) b.click();
+      }
+    };
+
+    function finish() {
+      clearInterval(tick);
+      document.onkeydown = null;
+      resolve({ correct, total, score: Math.round(correct / total * 100), timeMs: performance.now() - startAll, detail });
+    }
+    nextQ();
+  });
+}
+
+/* ═══ Distractor helper ═════════════════════════════════════════════ */
+function numOptions(correct, opts) {
+  /* Distractors sit near the correct value so the answer cannot be found by
+     magnitude alone; the halve/double pair covers the common formula slip. */
+  const o = opts || {};
+  const dec = o.dec === undefined ? 0 : o.dec;
+  const unit = o.unit || "";
+  const target = round(correct, dec);
+  const mag = Math.abs(correct);
+  const step = o.step || Math.max(Math.pow(10, -dec), round(mag * 0.08, dec) || 1);
+  const set = new Set([target]);
+  let guard = 0;
+  while (set.size < 4 && guard++ < 300) {
+    const r = Math.random();
+    let d;
+    if (r < .45) d = correct + (Math.random() < .5 ? -1 : 1) * step * ri(1, 3);
+    else if (r < .75) d = correct * (1 + (Math.random() < .5 ? -1 : 1) * (0.09 + Math.random() * 0.3));
+    else if (mag >= 20) d = correct * pick([0.5, 1.5, 2]);
+    else d = correct + (Math.random() < .5 ? -1 : 1) * step * ri(1, 5);
+    d = round(d, dec);
+    if (o.positive !== false && d <= 0) continue;
+    if (d !== target) set.add(d);
+  }
+  let fill = 1;
+  while (set.size < 4) { set.add(round(target + step * fill, dec)); fill++; }
+  const fmt = v => (dec > 0 ? v.toFixed(dec) : String(v)) + (unit ? " " + unit : "");
+  return shuffle(Array.from(set)).map(v => ({ t: fmt(v), plain: fmt(v), ok: v === target }));
+}
+function textOptions(correct, wrongs) {
+  const seen = new Set([String(correct)]);
+  const out = [];
+  for (const w of wrongs) {
+    if (out.length === 3) break;
+    const k = String(w);
+    if (seen.has(k)) continue;
+    seen.add(k); out.push({ t: w, plain: w, ok: false });
+  }
+  return shuffle([{ t: correct, plain: correct, ok: true }].concat(out));
+}
+</script>
+<script>
+/* ═══ Kopfrechnen – procedural generators ═══════════════════════════ */
+const MathGen = {};
+
+MathGen.arith = () => {
+  const kind = pick(["mul", "div", "pct", "frac", "chain"]);
+  if (kind === "mul") {
+    const a = ri(12, 49), b = ri(11, 29);
+    return { stem: `Berechne im Kopf: <span class="mono">${a} &times; ${b}</span>`, v: a * b,
+      explain: `${a} &times; ${b} = ${a} &times; ${b - b % 10} + ${a} &times; ${b % 10} = ${a * (b - b % 10)} + ${a * (b % 10)} = <b>${a * b}</b>` };
+  }
+  if (kind === "div") {
+    const b = ri(6, 24), q = ri(11, 60), a = b * q;
+    return { stem: `Berechne im Kopf: <span class="mono">${a} &divide; ${b}</span>`, v: q,
+      explain: `${b} &times; ${q} = ${a}, also ist das Ergebnis <b>${q}</b>.` };
+  }
+  if (kind === "pct") {
+    const p = pick([5, 12, 15, 18, 24, 25, 35, 45, 60, 75]), base = ri(6, 48) * 20;
+    return { stem: `Wie viel sind <span class="mono">${p}&nbsp;%</span> von <span class="mono">${base}</span>?`, v: base * p / 100, dec: base * p % 100 ? 1 : 0,
+      explain: `1&nbsp;% von ${base} = ${base / 100}. ${p} &times; ${base / 100} = <b>${round(base * p / 100, 2)}</b>` };
+  }
+  if (kind === "frac") {
+    const den = pick([4, 8, 16, 5, 20, 3, 6]), num = ri(1, den - 1), base = den * ri(8, 40);
+    return { stem: `Wie viel sind <span class="mono">${num}/${den}</span> von <span class="mono">${base}</span>?`, v: base * num / den,
+      explain: `${base} &divide; ${den} = ${base / den}; ${base / den} &times; ${num} = <b>${base * num / den}</b>` };
+  }
+  const a = ri(20, 90), b = ri(3, 12), c = ri(11, 40);
+  return { stem: `Berechne im Kopf: <span class="mono">(${a} + ${c}) &times; ${b}</span>`, v: (a + c) * b,
+    explain: `${a} + ${c} = ${a + c}; ${a + c} &times; ${b} = <b>${(a + c) * b}</b>` };
+};
+
+MathGen.sdt = () => {
+  const gs = pick([180, 210, 240, 270, 300, 330, 360, 400, 420, 450, 480]);
+  const mode = pick(["time", "dist", "gs"]);
+  const min = pick([10, 12, 15, 20, 24, 25, 30, 36, 40, 45, 50]);
+  const dist = Math.round(gs * min / 60);
+  if (mode === "time") return { eyebrow: "Speed · Distance · Time",
+    stem: `Ein Flugzeug fliegt mit einer Grundgeschwindigkeit von <b>${gs} kt</b>. Wie viele <b>Minuten</b> benötigt es für <b>${dist} NM</b>?`,
+    v: min, unit: "min", explain: `Zeit = Strecke &divide; Geschwindigkeit = ${dist} &divide; ${gs} h = ${round(dist / gs, 3)} h. &times; 60 = <b>${min} min</b>.<br>Faustformel: bei ${gs} kt legt man ${round(gs / 60, 1)} NM pro Minute zurück.` };
+  if (mode === "dist") return { eyebrow: "Speed · Distance · Time",
+    stem: `Grundgeschwindigkeit <b>${gs} kt</b>, Flugzeit <b>${min} Minuten</b>. Welche Strecke wird zurückgelegt?`,
+    v: dist, unit: "NM", explain: `${gs} kt = ${round(gs / 60, 1)} NM/min. ${round(gs / 60, 1)} &times; ${min} = <b>${dist} NM</b>.` };
+  return { eyebrow: "Speed · Distance · Time",
+    stem: `Für <b>${dist} NM</b> werden <b>${min} Minuten</b> benötigt. Wie hoch ist die Grundgeschwindigkeit?`,
+    v: Math.round(dist * 60 / min), unit: "kt", explain: `${dist} NM &divide; ${min} min = ${round(dist / min, 2)} NM/min. &times; 60 = <b>${Math.round(dist * 60 / min)} kt</b>.` };
+};
+
+MathGen.fuel = () => {
+  const ff = pick([1800, 2000, 2200, 2400, 2600, 2800, 3000, 3200]);
+  if (Math.random() < .5) {
+    const min = pick([15, 20, 30, 40, 45, 50, 75, 90]);
+    return { eyebrow: "Treibstoffberechnung",
+      stem: `Der Verbrauch beträgt <b>${ff} kg/h</b>. Wie viel Treibstoff wird in <b>${min} Minuten</b> verbraucht?`,
+      v: Math.round(ff * min / 60), unit: "kg", step: 50,
+      explain: `${ff} kg/h &divide; 60 = ${round(ff / 60, 1)} kg/min. &times; ${min} min = <b>${Math.round(ff * min / 60)} kg</b>.` };
+  }
+  const h = pick([1, 1.5, 2, 2.5, 3]), onboard = ff * h;
+  return { eyebrow: "Treibstoffberechnung",
+    stem: `An Bord sind <b>${onboard} kg</b> Treibstoff, der Verbrauch beträgt <b>${ff} kg/h</b>. Wie viele <b>Minuten</b> Flugzeit verbleiben?`,
+    v: Math.round(h * 60), unit: "min", step: 10,
+    explain: `${onboard} &divide; ${ff} = ${h} h = <b>${h * 60} min</b>.` };
+};
+
+MathGen.descent = () => {
+  if (Math.random() < .5) {
+    const fl = pick([100, 150, 180, 200, 240, 280, 310, 350, 370, 390]);
+    const alt = pick([0, 3000, 5000, 6000]);
+    const lose = fl * 100 - alt;
+    return { eyebrow: "Sinkflugplanung · 3:1-Regel",
+      stem: `Ein Flugzeug befindet sich auf <b>FL${fl}</b> und soll auf <b>${alt} ft</b> sinken. Nach der 3:1-Regel: Wie viele <b>NM</b> vor dem Punkt muss der Sinkflug beginnen?`,
+      v: Math.round(lose / 1000 * 3), unit: "NM",
+      explain: `Höhendifferenz = ${fl * 100} &minus; ${alt} = ${lose} ft = ${lose / 1000} tausend Fuß.<br>3:1-Regel: ${lose / 1000} &times; 3 = <b>${Math.round(lose / 1000 * 3)} NM</b>.` };
+  }
+  const gs = pick([180, 220, 240, 280, 300, 320, 360]);
+  return { eyebrow: "Sinkflugplanung · 3°-Profil",
+    stem: `Grundgeschwindigkeit <b>${gs} kt</b>. Welche <b>Sinkrate</b> (ft/min) hält ein 3°-Anflugprofil?`,
+    v: gs * 5, unit: "ft/min", step: 100,
+    explain: `Faustformel für 3°: Sinkrate &asymp; Grundgeschwindigkeit &times; 5.<br>${gs} &times; 5 = <b>${gs * 5} ft/min</b>.` };
+};
+
+MathGen.convert = () => {
+  const c = pick([
+    { q: v => `<b>${v} NM</b> entsprechen wie vielen Kilometern?`, gen: () => ri(4, 60) * 10, f: v => v * 1.852, u: "km", dec: 0, e: v => `1 NM = 1,852 km &rarr; ${v} &times; 1,852 = <b>${round(v * 1.852, 0)} km</b>` },
+    { q: v => `<b>${v} km</b> entsprechen wie vielen nautischen Meilen?`, gen: () => ri(5, 60) * 10, f: v => v / 1.852, u: "NM", dec: 0, e: v => `${v} &divide; 1,852 = <b>${round(v / 1.852, 0)} NM</b>` },
+    { q: v => `<b>${v} ft</b> entsprechen wie vielen Metern?`, gen: () => ri(10, 120) * 100, f: v => v * 0.3048, u: "m", dec: 0, e: v => `1 ft = 0,3048 m &rarr; ${v} &times; 0,3048 &asymp; <b>${round(v * .3048, 0)} m</b>` },
+    { q: v => `<b>${v} m</b> entsprechen wie vielen Fuß?`, gen: () => ri(3, 40) * 100, f: v => v / 0.3048, u: "ft", dec: 0, e: v => `${v} &divide; 0,3048 &asymp; ${v} &times; 3,28 = <b>${round(v / .3048, 0)} ft</b>` },
+    { q: v => `<b>${v} kg</b> entsprechen wie vielen Pfund (lbs)?`, gen: () => ri(20, 300) * 10, f: v => v * 2.2046, u: "lbs", dec: 0, e: v => `1 kg = 2,2046 lbs &rarr; ${v} &times; 2,2 &asymp; <b>${round(v * 2.2046, 0)} lbs</b>` },
+    { q: v => `<b>${v} Liter</b> Kerosin bei einer Dichte von 0,80 kg/l entsprechen wie vielen Kilogramm?`, gen: () => ri(50, 400) * 10, f: v => v * .8, u: "kg", dec: 0, e: v => `${v} &times; 0,80 = <b>${round(v * .8, 0)} kg</b>` },
+    { q: v => `<b>${v} °C</b> entsprechen wie vielen Grad Fahrenheit?`, gen: () => ri(-40, 40), f: v => v * 9 / 5 + 32, u: "°F", dec: 0, pos: false, e: v => `°F = °C &times; 1,8 + 32 = ${v} &times; 1,8 + 32 = <b>${round(v * 1.8 + 32, 0)} °F</b>` },
+    { q: v => `<b>${v} kt</b> entsprechen wie vielen Metern pro Sekunde?`, gen: () => ri(2, 24) * 10, f: v => v * .5144, u: "m/s", dec: 1, e: v => `1 kt &asymp; 0,514 m/s &rarr; ${v} &times; 0,514 = <b>${round(v * .5144, 1)} m/s</b>` }
+  ]);
+  const v = c.gen();
+  return { eyebrow: "Einheitenumrechnung", stem: c.q(v), v: c.f(v), unit: c.u, dec: c.dec, positive: c.pos !== false, explain: c.e(v) };
+};
+
+MathGen.wind = () => {
+  const rwyDeg = pick([4, 9, 11, 16, 21, 25, 29, 34]) * 10;
+  const ang = pick([30, 45, 60, 90]);
+  const forceCross = ang === 90;
+  const side = pick([-1, 1]);
+  const factor = { 30: .5, 45: .7, 60: .87, 90: 1 }[ang];
+  const spd = pick([10, 12, 15, 18, 20, 24, 25, 30]);
+  let wd = (rwyDeg + side * ang + 360) % 360; if (wd === 0) wd = 360;
+  const xw = spd * factor;
+  const cross = forceCross || Math.random() < .55;
+  return { eyebrow: "Windkomponente",
+    stem: `Piste <b>${pad(rwyDeg / 10)}</b> (Richtung ${pad(rwyDeg, 3)}°), Wind <b>${pad(wd, 3)}°/${spd} kt</b>. Wie groß ist die <b>${cross ? "Seitenwind" : "Gegenwind"}komponente</b>?`,
+    v: cross ? xw : spd * { 30: .87, 45: .7, 60: .5, 90: 0 }[ang], unit: "kt", dec: 0, step: 2,
+    explain: `Winkel zwischen Pistenrichtung und Wind = ${ang}°.<br>Uhrzeigerregel: 30° &rarr; 1/2, 45° &rarr; 0,7, 60° &rarr; 0,9, 90° &rarr; 1/1 des Windes als Seitenwind (Gegenwind jeweils umgekehrt).<br>${cross ? `Seitenwind = ${spd} &times; ${factor} = <b>${round(xw, 0)} kt</b>` : `Gegenwind = ${spd} &times; ${{ 30: .87, 45: .7, 60: .5, 90: 0 }[ang]} = <b>${round(spd * { 30: .87, 45: .7, 60: .5, 90: 0 }[ang], 0)} kt</b>`}` };
+};
+
+MathGen.pax = () => {
+  const seats = pick([76, 100, 120, 138, 174, 186, 200, 220]);
+  const lf = pick([62, 68, 72, 75, 80, 84, 88, 92]);
+  const pax = Math.round(seats * lf / 100);
+  if (Math.random() < .5) return { eyebrow: "Anteilsrechnung",
+    stem: `Ein Flugzeug hat <b>${seats} Sitzplätze</b> und ist zu <b>${lf} %</b> ausgelastet. Wie viele Passagiere sind an Bord?`,
+    v: pax, unit: "Pax", explain: `${seats} &times; ${lf / 100} = <b>${pax} Passagiere</b>.` };
+  return { eyebrow: "Anteilsrechnung",
+    stem: `Von <b>${seats} Sitzplätzen</b> sind <b>${pax}</b> belegt. Wie hoch ist die Auslastung in Prozent?`,
+    v: Math.round(pax / seats * 100), unit: "%", explain: `${pax} &divide; ${seats} = ${round(pax / seats, 3)} = <b>${Math.round(pax / seats * 100)} %</b>.` };
+};
+
+MathGen.time = () => {
+  const dh = ri(0, 23), dm = pick([0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55]);
+  const fh = ri(1, 11), fm = pick([5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55]);
+  const tot = dh * 60 + dm + fh * 60 + fm;
+  const ah = Math.floor(tot / 60) % 24, am = tot % 60;
+  const right = pad(ah) + ":" + pad(am);
+  const wrongs = shuffle([
+    pad((ah + 1) % 24) + ":" + pad(am), pad(ah) + ":" + pad((am + 10) % 60),
+    pad((ah + 23) % 24) + ":" + pad(am), pad((ah + 1) % 24) + ":" + pad((am + 60 - 5) % 60)
+  ]).filter(w => w !== right);
+  return { eyebrow: "Zeitrechnung (UTC)",
+    stem: `Abflug um <b>${pad(dh)}:${pad(dm)} UTC</b>, geplante Flugzeit <b>${fh} h ${pad(fm)} min</b>. Wann ist die geplante Ankunft (UTC)?`,
+    opts: textOptions(right, wrongs),
+    explain: `${pad(dh)}:${pad(dm)} + ${fh}:${pad(fm)} = ${pad(dh + fh)}:${pad(dm + fm)} &rarr; umgerechnet <b>${right} UTC</b>.` };
+};
+
+MathGen.isa = () => {
+  const fl = pick([50, 80, 100, 120, 150, 180, 200, 240, 280, 300, 340]);
+  const isaT = 15 - 2 * (fl / 10);
+  if (Math.random() < .5) return { eyebrow: "Standardatmosphäre",
+    stem: `Wie hoch ist die <b>ISA-Standardtemperatur</b> auf <b>FL${fl}</b>?`,
+    v: isaT, unit: "°C", positive: false, step: 3,
+    explain: `ISA: 15 °C am Boden, &minus;2 °C pro 1000 ft.<br>15 &minus; (2 &times; ${fl / 10}) = <b>${isaT} °C</b>.` };
+  const dev = pick([-10, -5, 5, 8, 10, 12, 15]);
+  const oat = isaT + dev;
+  return { eyebrow: "Standardatmosphäre",
+    stem: `Auf <b>FL${fl}</b> wird eine Außentemperatur von <b>${oat} °C</b> gemessen. Wie groß ist die <b>ISA-Abweichung</b>?`,
+    v: dev, unit: "°C", positive: false, step: 3,
+    explain: `ISA auf FL${fl} = 15 &minus; ${2 * fl / 10} = ${isaT} °C.<br>Abweichung = ${oat} &minus; (${isaT}) = <b>${dev > 0 ? "+" : ""}${dev} °C</b>.` };
+};
+
+MathGen.altimeter = () => {
+  const qnh = pick([978, 985, 992, 998, 1003, 1008, 1021, 1028, 1033]);
+  const d = qnh - 1013;
+  return { eyebrow: "Höhenmessereinstellung",
+    stem: `Der Höhenmesser steht auf <b>1013 hPa</b>, das aktuelle QNH beträgt <b>${qnh} hPa</b>. Um wie viele <b>Fuß</b> weicht die angezeigte Höhe von der tatsächlichen ab? (27 ft pro hPa)`,
+    v: Math.abs(d) * 27, unit: "ft", step: 20,
+    explain: `Differenz = |${qnh} &minus; 1013| = ${Math.abs(d)} hPa.<br>${Math.abs(d)} &times; 27 = <b>${Math.abs(d) * 27} ft</b>. Bei ${qnh} hPa (${d < 0 ? "tiefer" : "höher"} als Standard) zeigt der Höhenmesser ${d < 0 ? "zu viel" : "zu wenig"} an.` };
+};
+
+MathGen.climb = () => {
+  const roc = pick([600, 800, 1000, 1200, 1500, 1800, 2000, 2400]);
+  const gs = pick([120, 150, 180, 200, 240, 300]);
+  return { eyebrow: "Steigprofil",
+    stem: `Ein Flugzeug steigt mit <b>${roc} ft/min</b> bei einer Grundgeschwindigkeit von <b>${gs} kt</b>. Wie viele <b>Fuß pro NM</b> gewinnt es?`,
+    v: Math.round(roc / (gs / 60)), unit: "ft/NM", step: 20,
+    explain: `${gs} kt = ${round(gs / 60, 1)} NM/min.<br>${roc} ft/min &divide; ${round(gs / 60, 1)} NM/min = <b>${Math.round(roc / (gs / 60))} ft/NM</b>.` };
+};
+
+MathGen.ratio = () => {
+  const p1 = ri(2, 5), t1 = pick([12, 15, 18, 20, 24, 30, 36, 40, 60]);
+  const p2 = p1 + ri(1, 4);
+  const t2 = p1 * t1 / p2;
+  return { eyebrow: "Proportionalität",
+    stem: `<b>${p1} Betankungspumpen</b> füllen einen Tank in <b>${t1} Minuten</b>. Wie lange brauchen <b>${p2} Pumpen</b> gleicher Leistung?`,
+    v: t2, unit: "min", dec: t2 % 1 ? 1 : 0,
+    explain: `Gesamtarbeit = ${p1} &times; ${t1} = ${p1 * t1} Pumpenminuten.<br>${p1 * t1} &divide; ${p2} = <b>${round(t2, 1)} min</b> (umgekehrt proportional).` };
+};
+
+MathGen.series = () => {
+  const kind = pick(["add", "mul", "alt", "sq", "fib"]);
+  let seq = [], v = 0;
+  if (kind === "add") { let a = ri(3, 20), d = ri(3, 13); for (let i = 0; i < 5; i++) seq.push(a + d * i); v = a + d * 5; }
+  else if (kind === "mul") { let a = ri(2, 6), q = ri(2, 3); for (let i = 0; i < 5; i++) seq.push(a * Math.pow(q, i)); v = a * Math.pow(q, 5); }
+  else if (kind === "alt") { let a = ri(40, 90), d = ri(4, 11); for (let i = 0; i < 5; i++) seq.push(a + (i % 2 ? -1 : 1) * d * i); v = a + (5 % 2 ? -1 : 1) * d * 5; }
+  else if (kind === "sq") { const s = ri(2, 7); for (let i = 0; i < 5; i++) seq.push(Math.pow(s + i, 2)); v = Math.pow(s + 5, 2); }
+  else { let a = ri(1, 5), b = ri(2, 8); seq = [a, b]; for (let i = 0; i < 3; i++) seq.push(seq[seq.length - 1] + seq[seq.length - 2]); v = seq[4] + seq[3]; }
+  const names = { add: "Konstante Differenz", mul: "Konstanter Faktor", alt: "Alternierende Differenz", sq: "Quadratzahlen", fib: "Summe der beiden Vorgänger" };
+  return { eyebrow: "Zahlenreihe",
+    stem: `Wie lautet die nächste Zahl?<br><span class="mono" style="font-size:22px;letter-spacing:.06em">${seq.join("&nbsp;&nbsp;·&nbsp;&nbsp;")}&nbsp;&nbsp;·&nbsp;&nbsp;?</span>`,
+    v, positive: false, explain: `Bildungsgesetz: ${names[kind]}. Nächstes Glied = <b>${v}</b>.` };
+};
+
+const MATH_GENS = [MathGen.arith, MathGen.sdt, MathGen.fuel, MathGen.descent, MathGen.convert, MathGen.wind,
+                   MathGen.pax, MathGen.time, MathGen.isa, MathGen.altimeter, MathGen.climb, MathGen.ratio, MathGen.series];
+
+function mathQuestion() {
+  const g = lvl() === 1 ? pick([MathGen.arith, MathGen.sdt, MathGen.fuel, MathGen.convert, MathGen.pax, MathGen.series]) : pick(MATH_GENS);
+  const q = g();
+  return {
+    eyebrow: q.eyebrow || "Kopfrechnen",
+    stem: q.stem,
+    sub: "Ohne Taschenrechner und ohne Notizen rechnen.",
+    plain: q.stem.replace(/<[^>]+>/g, ""),
+    numericOpts: !q.opts,
+    options: q.opts || numOptions(q.v, { unit: q.unit, dec: q.dec || 0, positive: q.positive, step: q.step }),
+    explain: q.explain
+  };
+}
+</script>
+<script>
+/* ═══ Technisch-physikalisches Verständnis ══════════════════════════ */
+const T = (cat, q, a, w1, w2, w3, e) => ({ cat, q, a, w: [w1, w2, w3], e });
+const TECH_BANK = [
+/* Mechanik */
+T("Mechanik", "An einem einseitigen Hebel greift 2 m vom Drehpunkt entfernt eine Last von 300 N an. Welche Kraft ist im Abstand von 5 m zum Drehpunkt nötig, um Gleichgewicht zu halten?",
+  "120 N", "150 N", "750 N", "60 N", "Hebelgesetz: Kraft × Kraftarm = Last × Lastarm. F = (300 N × 2 m) / 5 m = 120 N."),
+T("Mechanik", "Ein Flaschenzug besteht aus vier tragenden Seilsträngen. Welche Zugkraft ist nötig, um eine Last von 800 N anzuheben (reibungsfrei)?",
+  "200 N", "400 N", "800 N", "3200 N", "Die Last verteilt sich auf alle tragenden Stränge: F = 800 N / 4 = 200 N. Der Seilweg vervierfacht sich dabei."),
+T("Mechanik", "Zwei ineinandergreifende Zahnräder: Das Antriebsrad hat 12 Zähne, das Abtriebsrad 36 Zähne. Wie verhält sich das Abtriebsrad?",
+  "Es dreht dreimal langsamer und in entgegengesetzter Richtung", "Es dreht dreimal schneller und in gleicher Richtung", "Es dreht dreimal langsamer und in gleicher Richtung", "Es dreht gleich schnell, nur mit mehr Drehmoment",
+  "Übersetzung 12:36 = 1:3 → dritte Drehzahl, dreifaches Drehmoment. Direkt kämmende Zahnräder laufen immer gegenläufig."),
+T("Mechanik", "Eine hydraulische Presse hat einen Eingangskolben von 5 cm² und einen Ausgangskolben von 100 cm². Welche Kraft entsteht am Ausgang bei 250 N Eingangskraft?",
+  "5000 N", "1250 N", "12,5 N", "500 N", "Der Druck ist überall gleich: p = 250 N / 5 cm² = 50 N/cm². Ausgang: 50 N/cm² × 100 cm² = 5000 N."),
+T("Mechanik", "Ein Körper wird auf einer schiefen Ebene mit 30° Neigung gehalten. Wie ändert sich die nötige Haltekraft, wenn der Neigungswinkel auf 60° erhöht wird?",
+  "Sie steigt, weil die Hangabtriebskraft mit dem Winkel zunimmt", "Sie bleibt gleich, da die Masse unverändert ist", "Sie sinkt, weil der Weg kürzer wird", "Sie halbiert sich",
+  "Die Hangabtriebskraft beträgt F = m · g · sin α. Von sin 30° = 0,5 auf sin 60° = 0,87 steigt sie deutlich an."),
+T("Mechanik", "Zwei Kugeln unterschiedlicher Masse fallen im Vakuum aus gleicher Höhe. Welche kommt zuerst unten an?",
+  "Beide gleichzeitig", "Die schwerere", "Die leichtere", "Die mit dem kleineren Durchmesser",
+  "Im Vakuum wirkt keine Luftreibung. Die Fallbeschleunigung ist massenunabhängig, beide erreichen den Boden gleichzeitig."),
+T("Mechanik", "Die Schwingungsdauer eines Fadenpendels hängt ab von:",
+  "der Pendellänge", "der Masse des Pendelkörpers", "der Auslenkamplitude bei großen Winkeln", "dem Material des Fadens",
+  "T = 2π · √(l/g). Nur Länge und Ortsfaktor gehen ein – die Masse kürzt sich heraus."),
+T("Mechanik", "Ein Fahrzeug mit 1000 kg fährt 20 m/s, ein zweites mit 2000 kg fährt 10 m/s. Was gilt für die kinetische Energie?",
+  "Das leichtere Fahrzeug hat die doppelte Bewegungsenergie", "Beide haben dieselbe Bewegungsenergie", "Das schwerere hat die doppelte Bewegungsenergie", "Das schwerere hat die vierfache Bewegungsenergie",
+  "E = ½mv². Fahrzeug 1: 0,5 · 1000 · 400 = 200 kJ. Fahrzeug 2: 0,5 · 2000 · 100 = 100 kJ. Die Geschwindigkeit geht quadratisch ein."),
+T("Mechanik", "Womit lässt sich mit derselben Handkraft das größte Drehmoment an einer Schraube erzeugen?",
+  "Mit einem langen Schraubenschlüssel", "Mit einem kurzen Schraubenschlüssel", "Mit einem schwereren Schlüssel", "Die Länge hat keinen Einfluss",
+  "Drehmoment M = F × r. Ein längerer Hebelarm erzeugt bei gleicher Kraft ein größeres Moment."),
+T("Mechanik", "Ein Kran hebt eine Last von 500 kg um 12 m in 20 Sekunden. Welche Leistung wird ungefähr erbracht (g ≈ 10 m/s²)?",
+  "3 kW", "6 kW", "300 W", "60 kW", "Arbeit W = F · s = 5000 N × 12 m = 60 000 J. Leistung P = W / t = 60 000 J / 20 s = 3000 W."),
+/* Fluide & Gase */
+T("Fluide", "Wie verhält sich der statische Druck in einer Rohrverengung, wenn die Strömungsgeschwindigkeit dort zunimmt?",
+  "Er sinkt", "Er steigt", "Er bleibt konstant", "Er steigt sprunghaft und fällt dann ab",
+  "Bernoulli-Gleichung: Die Summe aus statischem und dynamischem Druck bleibt konstant. Steigt die Geschwindigkeit, sinkt der statische Druck."),
+T("Fluide", "Ein Gas wird bei konstanter Temperatur auf ein Drittel seines Volumens komprimiert. Was passiert mit dem Druck?",
+  "Er verdreifacht sich", "Er drittelt sich", "Er bleibt gleich", "Er verneunfacht sich",
+  "Gesetz von Boyle-Mariotte: p · V = konstant. Wird V gedrittelt, verdreifacht sich p."),
+T("Fluide", "Ein geschlossener Behälter mit Gas wird erwärmt, das Volumen bleibt konstant. Was geschieht?",
+  "Der Druck steigt", "Der Druck sinkt", "Der Druck bleibt konstant", "Die Dichte steigt",
+  "Gesetz von Amontons/Gay-Lussac: Bei konstantem Volumen ist der Druck proportional zur absoluten Temperatur."),
+T("Fluide", "Ein Körper schwimmt im Wasser. Was gilt für die Auftriebskraft?",
+  "Sie entspricht der Gewichtskraft des Körpers", "Sie ist größer als die Gewichtskraft", "Sie hängt nur vom Volumen des Körpers ab", "Sie ist unabhängig von der Dichte der Flüssigkeit",
+  "Archimedisches Prinzip: Der Auftrieb entspricht der Gewichtskraft der verdrängten Flüssigkeit. Beim Schwimmen herrscht Gleichgewicht mit der Gewichtskraft."),
+T("Fluide", "Warum nimmt die Luftdichte mit zunehmender Höhe ab?",
+  "Weil die darüberliegende Luftsäule und damit der Druck geringer wird", "Weil die Erdanziehung in der Höhe wegfällt", "Weil die Luft in der Höhe wärmer ist", "Weil der Sauerstoffanteil abnimmt",
+  "Mit der Höhe lastet weniger Luft auf einem Volumen – Druck und Dichte sinken. Der prozentuale Sauerstoffanteil bleibt bis in große Höhen nahezu konstant."),
+T("Fluide", "Wovon hängt die Ausbreitungsgeschwindigkeit des Schalls in Luft in erster Linie ab?",
+  "Von der Lufttemperatur", "Vom Luftdruck", "Von der Luftfeuchtigkeit", "Von der Schallquelle",
+  "Die Schallgeschwindigkeit steigt mit der Wurzel der absoluten Temperatur – in kalter Höhenluft ist sie deutlich geringer als am warmen Boden."),
+/* Elektrik */
+T("Elektrik", "Drei Widerstände von je 30 Ω sind parallel geschaltet. Wie groß ist der Gesamtwiderstand?",
+  "10 Ω", "90 Ω", "30 Ω", "3 Ω", "Bei gleichen Parallelwiderständen gilt R = R_einzeln / n = 30 Ω / 3 = 10 Ω. Der Gesamtwiderstand ist stets kleiner als der kleinste Einzelwiderstand."),
+T("Elektrik", "In einer Reihenschaltung aus drei Lampen brennt eine durch. Was passiert?",
+  "Alle Lampen erlöschen", "Nur die defekte Lampe erlischt", "Die übrigen leuchten heller", "Die Spannung steigt auf das Dreifache",
+  "In Reihe fließt derselbe Strom durch alle Verbraucher. Eine Unterbrechung öffnet den gesamten Stromkreis."),
+T("Elektrik", "Welcher Strom fließt durch einen Widerstand von 24 Ω bei einer Spannung von 12 V?",
+  "0,5 A", "2 A", "288 A", "12 A", "Ohmsches Gesetz: I = U / R = 12 V / 24 Ω = 0,5 A."),
+T("Elektrik", "Eine Batterie ist mit 40 Ah angegeben. Was bedeutet das näherungsweise?",
+  "Sie kann 4 Stunden lang 10 A liefern", "Sie liefert 40 A für eine beliebige Zeit", "Sie hat eine Spannung von 40 V", "Sie leistet 40 Watt pro Stunde",
+  "Die Kapazität in Amperestunden ist das Produkt aus Strom und Zeit: 10 A × 4 h = 40 Ah."),
+T("Elektrik", "Wozu dient eine Schmelzsicherung im Stromkreis?",
+  "Sie unterbricht den Stromkreis bei zu hohem Strom", "Sie glättet die Spannung", "Sie erhöht den Widerstand gleichmäßig", "Sie speichert elektrische Energie",
+  "Der Schmelzleiter wird bei Überstrom durch Erwärmung zerstört und trennt den Kreis, bevor Leitungen oder Verbraucher Schaden nehmen."),
+T("Elektrik", "Was leistet ein Transformator?",
+  "Er ändert die Wechselspannung bei annähernd gleichbleibender Leistung", "Er wandelt Wechselstrom in Gleichstrom um", "Er erhöht die Leistung des Stromkreises", "Er arbeitet auch mit reinem Gleichstrom",
+  "Über das Windungsverhältnis wird die Spannung hoch- oder heruntergesetzt; der Strom verhält sich umgekehrt. Ein Transformator benötigt ein sich änderndes Magnetfeld, also Wechselstrom."),
+/* Aerodynamik */
+T("Aerodynamik", "Die Geschwindigkeit eines Flugzeugs wird bei gleichem Anstellwinkel verdoppelt. Wie ändert sich der Auftrieb?",
+  "Er vervierfacht sich", "Er verdoppelt sich", "Er bleibt gleich", "Er halbiert sich",
+  "Im Auftriebsgesetz A = c_A · ½ · ρ · v² · S geht die Geschwindigkeit quadratisch ein: doppelte Geschwindigkeit → vierfacher Auftrieb."),
+T("Aerodynamik", "Wann tritt ein Strömungsabriss (Stall) ein?",
+  "Bei Überschreiten des kritischen Anstellwinkels", "Ausschließlich bei zu geringer Geschwindigkeit", "Nur im Horizontalflug", "Nur bei ausgefahrenen Landeklappen",
+  "Der Stall ist an den kritischen Anstellwinkel gebunden. Er kann in jeder Fluglage und bei jeder Geschwindigkeit auftreten – etwa im Kurvenflug mit hohem Lastvielfachen."),
+T("Aerodynamik", "Welche Wirkung haben ausgefahrene Landeklappen?",
+  "Mehr Auftrieb und mehr Widerstand, geringere Mindestgeschwindigkeit", "Mehr Auftrieb bei geringerem Widerstand", "Weniger Auftrieb und weniger Widerstand", "Nur eine Änderung der Längsneigung",
+  "Klappen erhöhen Wölbung und teils Flügelfläche. Der Auftriebsbeiwert steigt, die Überziehgeschwindigkeit sinkt – der Widerstand nimmt allerdings deutlich zu."),
+T("Aerodynamik", "Um welche Achse dreht ein Flugzeug beim Betätigen der Querruder?",
+  "Um die Längsachse", "Um die Querachse", "Um die Hochachse", "Um die Normalachse",
+  "Querruder steuern die Rollbewegung um die Längsachse. Höhenruder wirken um die Querachse, das Seitenruder um die Hochachse."),
+T("Aerodynamik", "Wozu dient die V-Stellung (Dihedral) der Tragflächen?",
+  "Sie erhöht die Stabilität um die Längsachse", "Sie verringert den Luftwiderstand", "Sie erhöht die Höchstgeschwindigkeit", "Sie verlagert den Schwerpunkt nach vorn",
+  "Gerät ein Flugzeug in Schräglage, erzeugt der tieferliegende Flügel mehr Auftrieb – das Flugzeug richtet sich selbst auf."),
+T("Aerodynamik", "Wozu dienen Winglets an den Flügelenden?",
+  "Sie verringern den induzierten Widerstand durch schwächere Randwirbel", "Sie erhöhen die Flügelfläche und damit den Auftrieb erheblich", "Sie dienen ausschließlich der Befestigung von Positionslichtern", "Sie erhöhen die Rollrate",
+  "Am Flügelende gleicht sich der Druckunterschied in Randwirbeln aus. Winglets schwächen diesen Ausgleich und senken damit den induzierten Widerstand."),
+T("Aerodynamik", "Ein Flugzeug steigt bei konstanter angezeigter Geschwindigkeit (IAS). Was geschieht mit der wahren Geschwindigkeit (TAS)?",
+  "Sie nimmt zu", "Sie nimmt ab", "Sie bleibt gleich", "Sie schwankt um den Ausgangswert",
+  "Das Staurohr misst den dynamischen Druck ½ρv². Weil ρ mit der Höhe sinkt, gehört zu gleicher IAS eine immer höhere wahre Geschwindigkeit."),
+T("Aerodynamik", "Was beschreibt die Mach-Zahl?",
+  "Das Verhältnis von Fluggeschwindigkeit zur örtlichen Schallgeschwindigkeit", "Die Geschwindigkeit über Grund in km/h", "Das Verhältnis von Auftrieb zu Widerstand", "Die Steiggeschwindigkeit in Fuß pro Minute",
+  "M = v / a. Da die Schallgeschwindigkeit temperaturabhängig ist, entspricht dieselbe Mach-Zahl in großer Höhe einer geringeren wahren Geschwindigkeit."),
+T("Aerodynamik", "Was bewirkt eine große Flügelstreckung (hohes Verhältnis Spannweite zu Flügeltiefe)?",
+  "Geringeren induzierten Widerstand", "Höhere Rollrate", "Größere Höchstgeschwindigkeit im Überschall", "Geringeres Flügelgewicht",
+  "Segelflugzeuge nutzen große Streckung: Die Randwirbel wirken sich auf einen kleineren Anteil der Fläche aus, der induzierte Widerstand sinkt."),
+/* Systeme */
+T("Systeme", "In welcher Reihenfolge durchströmt die Luft ein Strahltriebwerk?",
+  "Verdichter – Brennkammer – Turbine – Schubdüse", "Brennkammer – Verdichter – Turbine – Schubdüse", "Turbine – Verdichter – Brennkammer – Schubdüse", "Verdichter – Turbine – Brennkammer – Schubdüse",
+  "Der Verdichter erhöht den Druck, in der Brennkammer wird Kerosin zugeführt, die Turbine entnimmt Energie für den Verdichter, der Rest erzeugt in der Düse Schub."),
+T("Systeme", "Was ist die Aufgabe der Turbine im Strahltriebwerk?",
+  "Sie treibt den Verdichter an", "Sie erzeugt den gesamten Schub", "Sie kühlt die Brennkammer", "Sie verdichtet die einströmende Luft",
+  "Die Turbine entnimmt dem heißen Gasstrom genau so viel Energie, wie Verdichter und Nebenaggregate benötigen."),
+T("Systeme", "Warum wird die Kabine eines Verkehrsflugzeugs unter Druck gesetzt?",
+  "Weil der Luftdruck in Reiseflughöhe für den Menschen zu gering ist", "Um die Struktur des Rumpfes zu entlasten", "Um die Reisegeschwindigkeit zu erhöhen", "Um die Klimaanlage einzusparen",
+  "In Reiseflughöhe liegt der Umgebungsdruck bei etwa einem Viertel des Bodendrucks. Die Kabine wird typischerweise auf ein Druckniveau von rund 6000–8000 ft gehalten."),
+T("Systeme", "Welche Eigenschaft eines Kreisels nutzt ein mechanischer künstlicher Horizont?",
+  "Die Lagestabilität der Drehachse im Raum", "Die Präzession bei Krafteinwirkung", "Die Zunahme der Masse bei hoher Drehzahl", "Die magnetische Ausrichtung",
+  "Ein schnell rotierender Kreisel behält seine Achsrichtung im Raum bei. Das Gehäuse bewegt sich mit dem Flugzeug um den raumfesten Kreisel herum."),
+T("Systeme", "Ein Viertaktmotor: Welche Reihenfolge ist richtig?",
+  "Ansaugen – Verdichten – Arbeiten – Ausstoßen", "Verdichten – Ansaugen – Arbeiten – Ausstoßen", "Ansaugen – Arbeiten – Verdichten – Ausstoßen", "Ansaugen – Verdichten – Ausstoßen – Arbeiten",
+  "Die vier Takte laufen über zwei Kurbelwellenumdrehungen; nur der Arbeitstakt liefert Energie."),
+T("Systeme", "Was misst ein Staurohr (Pitotrohr) zusammen mit den statischen Druckabnehmern?",
+  "Die angezeigte Fluggeschwindigkeit", "Die Höhe über Grund", "Den Steuerkurs", "Die Außentemperatur",
+  "Der Fahrtmesser wertet die Differenz aus Gesamtdruck (Staurohr) und statischem Druck aus – diesen Staudruck übersetzt er in eine Geschwindigkeit."),
+T("Systeme", "Warum sind zwei Zahnräder über eine Kette verbunden nicht gegenläufig?",
+  "Weil die Kette die Drehrichtung überträgt statt sie umzukehren", "Weil Ketten immer schlupffrei laufen", "Weil die Zähnezahl gleich ist", "Weil das Drehmoment gleich bleibt",
+  "Ein direkt kämmendes Zahnradpaar läuft gegenläufig. Eine ungekreuzte Kette oder ein ungekreuzter Riemen überträgt die Drehrichtung dagegen unverändert."),
+T("Systeme", "Ein Bimetallstreifen aus zwei verschiedenen Metallen wird erwärmt. Was passiert?",
+  "Er biegt sich zur Seite des Metalls mit geringerer Wärmeausdehnung", "Er bleibt gerade und wird nur länger", "Er biegt sich zur Seite des Metalls mit größerer Ausdehnung", "Er verkürzt sich",
+  "Das stärker ausdehnende Metall wird länger und liegt außen an der Krümmung – der Streifen biegt sich zur Seite des schwächer ausdehnenden Metalls."),
+T("Systeme", "Warum wird bei Vereisungsgefahr die Enteisung der Tragflächenvorderkanten aktiviert?",
+  "Weil Eis das Profil verändert und Auftrieb kostet", "Weil Eis das Flugzeug ausschließlich schwerer macht", "Weil die Triebwerke sonst überhitzen", "Weil die Funkanlage gestört wird",
+  "Schon dünne Eisschichten stören die Umströmung des Profils erheblich: Der Auftrieb sinkt, der Widerstand steigt, die Überziehgeschwindigkeit nimmt zu."),
+T("Systeme", "Ein Zahnrad mit 20 Zähnen dreht sich 15-mal pro Minute und treibt ein Rad mit 60 Zähnen an. Wie oft dreht sich das große Rad pro Minute?",
+  "5-mal", "45-mal", "15-mal", "3-mal", "Die Zähnezahl verhält sich umgekehrt zur Drehzahl: 20 × 15 = 60 × n → n = 300 / 60 = 5 Umdrehungen pro Minute."),
+T("Systeme", "Wie wirkt sich eine höhere Platzhöhe (Elevation) eines Flughafens bei sonst gleichen Bedingungen auf den Startlauf aus?",
+  "Der Startlauf wird länger", "Der Startlauf wird kürzer", "Der Startlauf bleibt gleich", "Der Startlauf hängt nur vom Gewicht ab",
+  "Mit der Höhe sinkt die Luftdichte: Die Triebwerke leisten weniger und für dieselbe wahre Geschwindigkeit ist eine längere Strecke nötig. Hohe Temperaturen verstärken den Effekt."),
+T("Systeme", "Was bewirkt das Ausfahren der Spoilers (Störklappen) im Flug?",
+  "Weniger Auftrieb und mehr Widerstand", "Mehr Auftrieb und mehr Widerstand", "Weniger Widerstand bei gleichem Auftrieb", "Eine Erhöhung der Reisegeschwindigkeit",
+  "Spoilers unterbrechen die Strömung auf der Flügeloberseite. Sie werden zum Sinken, Verzögern und nach der Landung zum Aufsetzen des Gewichts auf die Räder eingesetzt.")
+];
+
+function techQuestion(i, used) {
+  let item;
+  let guard = 0;
+  do { item = pick(TECH_BANK); } while (used.has(item.q) && guard++ < 90);
+  used.add(item.q);
+  return {
+    eyebrow: item.cat,
+    stem: item.q,
+    plain: item.q,
+    options: textOptions(item.a, item.w),
+    explain: item.e
+  };
+}
+</script>
+<script>
+/* ═══ English – vocabulary, grammar, comprehension ══════════════════ */
+const E = (cat, q, a, w1, w2, w3, e, ctx) => ({ cat, q, a, w: [w1, w2, w3], e, ctx });
+const ENG_BANK = [
+/* Vocabulary */
+E("Vocabulary", "The runway was closed because of <b>debris</b> after the storm. <i>Debris</i> means:", "scattered fragments and loose material", "standing water", "rubber deposits from tyres", "a layer of compacted snow", "<i>Debris</i> = broken pieces or rubbish left after damage. On a runway it is a serious hazard to engines and tyres (FOD – foreign object debris)."),
+E("Vocabulary", "\"Visibility is expected to <b>deteriorate</b> after 1800Z.\" This means visibility will:", "get worse", "improve slowly", "stay unchanged", "fluctuate around the minimum", "<i>To deteriorate</i> = to become worse. The opposite is <i>to improve</i>."),
+E("Vocabulary", "A <b>diversion</b> is:", "a flight to an airport other than the planned destination", "a change of cruising level", "a delay before departure", "a detour around a thunderstorm cell", "A <i>diversion</i> means landing at an alternate aerodrome. A route deviation around weather is normally called a <i>deviation</i>."),
+E("Vocabulary", "The captain decided to <b>abort</b> the take-off. He:", "stopped the take-off before becoming airborne", "continued with reduced thrust", "took off and returned immediately", "handed control to the first officer", "<i>To abort</i> = to stop a procedure before it is completed. A rejected take-off is initiated before V1."),
+E("Vocabulary", "The engineers found a <b>leak</b> in the hydraulic system. A <i>leak</i> is:", "an unintended escape of fluid", "a crack without loss of fluid", "an electrical short circuit", "an excessive pressure reading", "<i>A leak</i> is fluid or gas escaping where it should not. The verb is <i>to leak</i>."),
+E("Vocabulary", "\"All passengers were <b>evacuated</b> within 90 seconds.\" To <i>evacuate</i> means:", "to move people out of a place of danger", "to give people safety instructions", "to count the people on board", "to move people to their seats", "<i>To evacuate</i> = to leave or remove from a dangerous place. The noun is <i>evacuation</i>."),
+E("Vocabulary", "A <b>gust</b> is:", "a sudden brief increase in wind speed", "a steady crosswind", "a downward air current under a cloud", "a sudden change in wind direction only", "A <i>gust</i> is a short, sharp increase in wind speed. A sustained change in direction with height is <i>wind shear</i>."),
+E("Vocabulary", "The crew reported <b>severe</b> turbulence. <i>Severe</i> is:", "stronger than moderate", "weaker than moderate", "the same as light", "a term only used for icing", "The intensity scale runs light – moderate – severe – extreme. In severe turbulence the aircraft is momentarily out of control."),
+E("Vocabulary", "\"Maintenance will be <b>carried out</b> overnight.\" This means the work will be:", "performed", "postponed", "inspected", "cancelled", "<i>To carry out</i> = to perform or complete a task. A common phrasal verb in technical English."),
+E("Vocabulary", "An aircraft that is <b>grounded</b> is:", "not permitted to fly", "parked at a remote stand", "taxiing to the runway", "flying at low level", "<i>Grounded</i> means prohibited from flying, usually for technical or regulatory reasons."),
+E("Vocabulary", "The <b>threshold</b> of a runway is:", "the beginning of the portion usable for landing", "the midpoint of the runway", "the end of the paved surface", "the holding point before the runway", "The <i>threshold</i> marks the start of the landing area, indicated by white stripes."),
+E("Vocabulary", "\"Braking action is <b>poor</b>.\" The crew should expect:", "a considerably longer stopping distance", "normal deceleration", "a shorter landing roll", "no effect on directional control", "Braking action is reported as good, medium, poor or less than poor. Poor braking action means substantially reduced deceleration and directional control."),
+E("Vocabulary", "To <b>taxi</b> means to:", "move the aircraft on the ground under its own power", "be towed to the stand", "climb at a shallow angle", "line up on the runway", "<i>Taxiing</i> is ground movement under the aircraft's own power. Being moved by a tug is <i>towing</i> or <i>push-back</i>."),
+E("Vocabulary", "The flight was delayed <b>due to</b> a technical fault. <i>Due to</i> can be replaced by:", "because of", "in spite of", "instead of", "regardless of", "<i>Due to</i> introduces a cause, like <i>because of</i> or <i>owing to</i>."),
+E("Vocabulary", "A <b>crew member</b> who is <b>on standby</b> is:", "available at short notice for a duty not yet assigned", "off duty for the rest of the month", "operating as a passenger to another base", "undergoing recurrent training", "<i>Standby</i> (or reserve) duty means being available to be called for a flight. Travelling as a passenger for duty is <i>positioning</i> or <i>deadheading</i>."),
+E("Vocabulary", "\"The approach was <b>discontinued</b>.\" This means the approach was:", "stopped before completion", "flown manually", "shortened by radar vectors", "completed with a steep descent", "<i>To discontinue</i> = to stop something already in progress, here followed by a go-around."),
+/* Grammar */
+E("Grammar", "The aircraft ___ in the holding pattern for forty minutes before the fog lifted.", "had been holding", "has been holding", "is holding", "would hold", "Past perfect continuous: an action that continued up to a later point in the past (<i>before the fog lifted</i>)."),
+E("Grammar", "If the crosswind ___ the limit, we would have diverted.", "had exceeded", "would exceed", "has exceeded", "exceeds", "Third conditional: <i>If</i> + past perfect, <i>would have</i> + past participle – an unreal situation in the past."),
+E("Grammar", "The first officer asked the controller ___ they could expect higher.", "when", "that when", "if when", "what", "Reported questions keep normal word order and use a question word: <i>asked when they could expect</i>, not <i>when could they</i>."),
+E("Grammar", "By the time we reach Vienna, we ___ for nine hours.", "will have been flying", "will fly", "have flown", "are flying", "Future perfect continuous: duration up to a point in the future."),
+E("Grammar", "Neither the captain nor the first officer ___ the warning light.", "has noticed", "have noticed", "are noticing", "were noticed", "With <i>neither … nor</i>, the verb agrees with the nearer subject – here the singular <i>first officer</i>."),
+E("Grammar", "The engine, ___ had been serviced the previous night, failed on climb-out.", "which", "who", "what", "whose", "<i>Which</i> introduces a non-defining relative clause referring to a thing; <i>who</i> is used for people."),
+E("Grammar", "We had to ___ the departure because of a technical problem.", "delay", "delaying", "be delayed", "delayed", "After <i>had to</i> the bare infinitive follows: <i>had to delay</i>."),
+E("Grammar", "There is ___ fuel remaining to reach the alternate.", "enough", "enough of", "as enough", "quite enough of the", "<i>Enough</i> precedes an uncountable noun directly: <i>enough fuel</i>."),
+E("Grammar", "The runway ___ resurfaced at the moment, so we expect delays.", "is being", "is been", "has being", "is be", "Present continuous passive: <i>is/are being</i> + past participle, for something happening right now."),
+E("Grammar", "The passengers were asked to remain seated ___ the seat belt sign was switched off.", "until", "since", "during", "by the time", "<i>Until</i> marks the end point of a state that continues up to that moment."),
+E("Grammar", "This is the ___ approach I have flown into this airport.", "most difficult", "difficultest", "more difficult", "much difficult", "Superlative of a three-syllable adjective is formed with <i>most</i>."),
+E("Grammar", "The load sheet ___ before departure.", "must be signed", "must sign", "must to be signed", "must being signed", "Modal passive: modal verb + <i>be</i> + past participle."),
+E("Grammar", "___ the poor weather, the flight departed on time.", "Despite", "Although", "However", "Even", "<i>Despite</i> is followed by a noun phrase; <i>although</i> would require a full clause."),
+E("Grammar", "We ___ the descent when ATC gave us a new clearance.", "had already commenced", "have already commenced", "already commence", "were already commence", "Past perfect for the earlier of two past actions."),
+E("Grammar", "The technician explained how the system ___.", "worked", "did work", "was work", "works it", "In reported speech following a past reporting verb, the present tense normally shifts to the past."),
+E("Grammar", "Little ___ that the weather would close in so quickly.", "did we know", "we knew", "we did know", "knew we", "After a negative adverbial at the start of a sentence (<i>little</i>, <i>never</i>, <i>rarely</i>), the subject and auxiliary are inverted."),
+/* Comprehension */
+E("Comprehension", "According to the report, what was the primary cause of the incident?", "A misunderstood clearance", "An engine failure", "A hydraulic leak", "Severe turbulence",
+  "The text names the readback error as the initiating factor; the technical items are described as unrelated.",
+  "During the approach the crew was cleared to descend to 5,000 feet. The first officer read back \"four thousand\" and the controller, occupied with another aircraft, did not correct the readback. The aircraft levelled off 1,000 feet below the assigned altitude and triggered a low-altitude alert. The subsequent inspection revealed a minor hydraulic seal seepage, which the investigation found to be unrelated to the event."),
+E("Comprehension", "What does the report say about the hydraulic finding?", "It was not connected to the event", "It caused the level bust", "It was discovered before departure", "It required an engine change",
+  "The final sentence states the seepage was found to be unrelated to the event.",
+  "During the approach the crew was cleared to descend to 5,000 feet. The first officer read back \"four thousand\" and the controller, occupied with another aircraft, did not correct the readback. The aircraft levelled off 1,000 feet below the assigned altitude and triggered a low-altitude alert. The subsequent inspection revealed a minor hydraulic seal seepage, which the investigation found to be unrelated to the event."),
+E("Comprehension", "Why were arriving aircraft held?", "Because the runway had to be inspected", "Because of a strike by ground staff", "Because visibility fell below minima", "Because of a shortage of parking stands",
+  "The notice states the inspection following a bird-strike report is the reason for the holding.",
+  "ATTENTION ALL ARRIVING TRAFFIC: Following a bird-strike report from a departing aircraft, runway 16 will be closed for inspection from 1420Z. Expect holding at the published fixes for approximately 20 minutes. Aircraft with fuel below final reserve should advise ATC immediately. Runway 11/29 remains available for aircraft with a landing distance requirement of less than 2,200 metres."),
+E("Comprehension", "Which aircraft may use runway 11/29?", "Those needing less than 2,200 m of landing distance", "All arriving traffic without restriction", "Only aircraft declaring minimum fuel", "Only departing aircraft",
+  "The last sentence limits runway 11/29 to aircraft whose landing distance requirement is under 2,200 metres.",
+  "ATTENTION ALL ARRIVING TRAFFIC: Following a bird-strike report from a departing aircraft, runway 16 will be closed for inspection from 1420Z. Expect holding at the published fixes for approximately 20 minutes. Aircraft with fuel below final reserve should advise ATC immediately. Runway 11/29 remains available for aircraft with a landing distance requirement of less than 2,200 metres."),
+E("Comprehension", "What should a crew do if fuel is below final reserve?", "Inform ATC without delay", "Continue holding as instructed", "Request runway 11/29 after landing clearance", "Wait for the 20 minutes to pass",
+  "The notice explicitly instructs such aircraft to advise ATC immediately.",
+  "ATTENTION ALL ARRIVING TRAFFIC: Following a bird-strike report from a departing aircraft, runway 16 will be closed for inspection from 1420Z. Expect holding at the published fixes for approximately 20 minutes. Aircraft with fuel below final reserve should advise ATC immediately. Runway 11/29 remains available for aircraft with a landing distance requirement of less than 2,200 metres."),
+E("Comprehension", "What is the main point of the training notice?", "Crews must complete the module before the deadline or lose their line qualification", "The module replaces the annual simulator check", "Only newly hired first officers are affected", "The deadline has been extended indefinitely",
+  "The notice makes completion by 30 November a condition for remaining rostered on line duties.",
+  "TRAINING NOTICE: The revised low-visibility operations module is now available on the crew portal. All flight crew are required to complete the module, including the assessment, by 30 November. Crew who have not completed it by that date will be removed from line duties until the requirement is met. The module does not replace the annual simulator check and takes approximately 90 minutes."),
+E("Comprehension", "How long does the module take?", "About 90 minutes", "About 30 minutes", "A full duty day", "The same as a simulator check",
+  "The final sentence gives the approximate duration as 90 minutes.",
+  "TRAINING NOTICE: The revised low-visibility operations module is now available on the crew portal. All flight crew are required to complete the module, including the assessment, by 30 November. Crew who have not completed it by that date will be removed from line duties until the requirement is met. The module does not replace the annual simulator check and takes approximately 90 minutes."),
+/* Radiotelephony */
+E("Radiotelephony", "ATC transmits: \"Austrian 431, line up runway 16 and wait.\" What is expected?", "Enter the runway and hold position without taking off", "Take off immediately", "Hold short of the runway", "Backtrack and vacate", "<i>Line up and wait</i> means enter the runway and hold in position. Take-off requires a separate clearance."),
+E("Radiotelephony", "What does \"say again\" mean?", "Repeat your last transmission", "Confirm you have received the message", "Change to the previous frequency", "Correct the error in your message", "<i>Say again</i> requests a repetition. Confirmation of receipt is <i>roger</i>; a correction is introduced with <i>correction</i>."),
+E("Radiotelephony", "\"Standby\" from ATC means:", "Wait, I will call you", "Your request is approved", "Continue as previously cleared and report", "Your message was not received", "<i>Standby</i> means wait – the controller will call back. It is neither an approval nor a rejection."),
+E("Radiotelephony", "Which phrase means the crew has both received and understood an instruction and will comply?", "Wilco", "Roger", "Affirm", "Read back", "<i>Wilco</i> = will comply. <i>Roger</i> only confirms receipt; <i>affirm</i> means yes."),
+E("Radiotelephony", "\"Austrian 118, cleared for the approach, report runway in sight.\" The crew must:", "Fly the approach and tell ATC when the runway becomes visible", "Continue only after seeing the runway", "Report only if the runway is not seen", "Request further descent first", "The clearance permits the approach; the report is required at the moment visual contact with the runway is established."),
+E("Radiotelephony", "What is the meaning of \"go around\"?", "Discontinue the approach and climb away", "Circle the field for spacing", "Taxi around the holding point", "Extend the downwind leg", "A <i>go-around</i> is the immediate discontinuation of an approach followed by a climb along the published missed approach procedure."),
+E("Radiotelephony", "\"Pan-pan, pan-pan, pan-pan\" indicates:", "An urgency condition without immediate danger to life", "A distress condition requiring immediate assistance", "A routine position report", "A radio check request", "<i>Pan-pan</i> signals urgency; <i>mayday</i> signals distress with grave and imminent danger.")
+];
+
+function engQuestion(i, used) {
+  let item, guard = 0;
+  do { item = pick(ENG_BANK); } while (used.has(item.q) && guard++ < 90);
+  used.add(item.q);
+  const stem = (item.ctx ? `<div style="font-size:14.5px;line-height:1.6;color:var(--ink-2);padding:13px 15px;background:var(--panel-2);border:1px solid var(--line);border-radius:3px;margin-bottom:16px">${item.ctx}</div>` : "") + item.q;
+  return {
+    eyebrow: item.cat, stem, plain: item.q.replace(/<[^>]+>/g, ""),
+    sub: "Choose the best answer.",
+    options: textOptions(item.a, item.w), explain: item.e
+  };
+}
+</script>
+<script>
+/* ═══ Instrument drawing ════════════════════════════════════════════
+   Every instrument is drawn on a canvas from live CSS tokens so both
+   themes stay correct. Redraw hooks re-run when the theme is toggled.  */
+const cssv = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+let redrawFns = [];
+function canvasFor(parent, size, drawFn) {
+  const c = el("canvas", { width: size, height: size, style: `width:${size}px;height:${size}px;max-width:100%` });
+  parent.appendChild(c);
+  const run = () => {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    c.width = size * dpr; c.height = size * dpr;
+    const x = c.getContext("2d");
+    x.setTransform(dpr, 0, 0, dpr, 0, 0);
+    x.clearRect(0, 0, size, size);
+    drawFn(x, size);
+  };
+  run(); redrawFns.push(run);
+  return c;
+}
+const Inst = {};
+/* Instrument plus caption. The caption is HTML, not canvas text, so it keeps
+   the page's typography and never collides with the dial markings. */
+function instFig(parent, size, drawFn, caption) {
+  const fig = el("figure", { style: "margin:0;display:flex;flex-direction:column;align-items:center;gap:5px" });
+  parent.appendChild(fig);
+  canvasFor(fig, size, drawFn);
+  if (caption) fig.appendChild(el("figcaption", { class: "lbl", style: "font-size:11px", text: caption }));
+  return fig;
+}
+Inst.bezel = (x, s, label) => {
+  const r = s / 2 - 2;
+  x.save();
+  x.beginPath(); x.arc(s / 2, s / 2, r, 0, 7); x.fillStyle = cssv("--panel-2"); x.fill();
+  x.lineWidth = 2; x.strokeStyle = cssv("--line"); x.stroke();
+  x.restore();
+};
+Inst.clipDial = (x, s, inset) => { x.beginPath(); x.arc(s / 2, s / 2, s / 2 - (inset || 6), 0, 7); x.clip(); };
+
+/* Artificial horizon. pitch: degrees nose-up positive. bank: degrees right-wing-down positive. */
+Inst.adi = (x, s, pitch, bank) => {
+  const c = s / 2, r = c - 6, ppd = r / 26;
+  x.save(); Inst.clipDial(x, s, 6);
+  x.save();
+  x.translate(c, c);
+  x.rotate(-bank * Math.PI / 180);   /* world counter-rotates against the aircraft */
+  x.translate(0, pitch * ppd);        /* nose up pushes the horizon down */
+  x.fillStyle = cssv("--sky"); x.fillRect(-s, -s * 1.5, s * 2, s * 1.5);
+  x.fillStyle = cssv("--ground"); x.fillRect(-s, 0, s * 2, s * 1.5);
+  x.strokeStyle = "#F2F6F7"; x.lineWidth = 1.6;
+  x.beginPath(); x.moveTo(-s, 0); x.lineTo(s, 0); x.stroke();
+  x.lineWidth = 1.3; x.strokeStyle = "rgba(255,255,255,.85)";
+  [[10, .30], [20, .18], [-10, .30], [-20, .18]].forEach(([d, wf]) => {
+    const y = -d * ppd, w = r * wf;
+    x.beginPath(); x.moveTo(-w, y); x.lineTo(w, y); x.stroke();
+    x.font = "500 8px 'IBM Plex Mono', monospace"; x.fillStyle = "rgba(255,255,255,.9)";
+    x.textAlign = "right"; x.fillText(String(Math.abs(d)), -w - 3, y + 3);
+    x.textAlign = "left"; x.fillText(String(Math.abs(d)), w + 3, y + 3);
+  });
+  [[5, .10], [15, .10], [-5, .10], [-15, .10]].forEach(([d, wf]) => {
+    const y = -d * ppd, w = r * wf;
+    x.beginPath(); x.moveTo(-w, y); x.lineTo(w, y); x.stroke();
+  });
+  x.restore();
+  /* bank scale, fixed to the case */
+  x.save(); x.translate(c, c);
+  x.strokeStyle = "#F2F6F7"; x.lineWidth = 1.4;
+  [-60, -45, -30, -20, -10, 10, 20, 30, 45, 60].forEach(a => {
+    const rad = (a - 90) * Math.PI / 180, len = (a % 30 === 0 || a === 45 || a === -45) ? 8 : 5;
+    x.beginPath();
+    x.moveTo(Math.cos(rad) * (r - 1), Math.sin(rad) * (r - 1));
+    x.lineTo(Math.cos(rad) * (r - 1 - len), Math.sin(rad) * (r - 1 - len));
+    x.stroke();
+  });
+  x.fillStyle = "#F2F6F7";
+  x.beginPath(); x.moveTo(0, -r + 1); x.lineTo(-5, -r + 10); x.lineTo(5, -r + 10); x.closePath(); x.fill();
+  /* bank pointer rides with the aircraft */
+  x.save(); x.rotate(-bank * Math.PI / 180);
+  x.fillStyle = cssv("--caution");
+  x.beginPath(); x.moveTo(0, -r + 11); x.lineTo(-5, -r + 21); x.lineTo(5, -r + 21); x.closePath(); x.fill();
+  x.restore();
+  /* fixed aircraft symbol */
+  x.strokeStyle = cssv("--caution"); x.lineWidth = 3; x.lineCap = "round";
+  x.beginPath();
+  x.moveTo(-r * .55, 0); x.lineTo(-r * .18, 0);
+  x.moveTo(r * .18, 0); x.lineTo(r * .55, 0);
+  x.stroke();
+  x.beginPath(); x.arc(0, 0, 2.6, 0, 7); x.fillStyle = cssv("--caution"); x.fill();
+  x.restore();
+  x.restore();
+  Inst.bezel2(x, s);
+};
+Inst.bezel2 = (x, s) => {
+  x.save(); x.beginPath(); x.arc(s / 2, s / 2, s / 2 - 5, 0, 7);
+  x.lineWidth = 3; x.strokeStyle = cssv("--line"); x.stroke(); x.restore();
+};
+
+/* Aircraft seen from directly behind.
+   bank>0 = right wing low (silhouette rotates clockwise on screen).
+   pitch>0 = nose up, the underside becomes visible; pitch<0 shows the upper surface. */
+Inst.planeRear = (x, s, pitch, bank) => {
+  const c = s / 2;
+  x.save();
+  x.fillStyle = cssv("--panel-2");
+  x.beginPath(); x.rect(0, 0, s, s); x.fill();
+  x.strokeStyle = cssv("--line"); x.lineWidth = 1; x.strokeRect(.5, .5, s - 1, s - 1);
+  x.translate(c, c);
+  x.rotate(bank * Math.PI / 180);
+  const span = s * .74, chord = s * .17;
+  const proj = Math.sin(Math.abs(pitch) * Math.PI / 180) * chord;
+  const up = pitch >= 0;                                  /* underside visible */
+  const face = up ? cssv("--ink-3") : cssv("--ink-2");
+  const edge = cssv("--ink");
+  /* wing surface, foreshortened by pitch */
+  if (proj > .6) {
+    x.fillStyle = face;
+    x.beginPath();
+    if (up) x.rect(-span / 2, 0, span, proj); else x.rect(-span / 2, -proj, span, proj);
+    x.fill();
+  }
+  /* wing leading edge */
+  x.strokeStyle = edge; x.lineWidth = 3.4; x.lineCap = "round";
+  x.beginPath(); x.moveTo(-span / 2, 0); x.lineTo(span / 2, 0); x.stroke();
+  /* fuselage */
+  x.fillStyle = edge;
+  x.beginPath(); x.ellipse(0, 0, s * .075, s * .075 + proj * .35, 0, 0, 7); x.fill();
+  /* fin, also foreshortened */
+  const finH = s * .27;
+  x.strokeStyle = edge; x.lineWidth = 3.4;
+  x.beginPath(); x.moveTo(0, -s * .05); x.lineTo(0, -s * .05 - finH); x.stroke();
+  /* tailplane */
+  const tSpan = span * .38, ty = -s * .05 - finH * .82;
+  x.lineWidth = 2.8;
+  x.beginPath(); x.moveTo(-tSpan / 2, ty); x.lineTo(tSpan / 2, ty); x.stroke();
+  if (proj > .6) {
+    x.fillStyle = face;
+    if (up) x.fillRect(-tSpan / 2, ty, tSpan, proj * .55);
+    else x.fillRect(-tSpan / 2, ty - proj * .55, tSpan, proj * .55);
+  }
+  x.restore();
+};
+
+/* Six-pack instruments */
+Inst.dial = (x, s, opts) => {
+  Inst.bezel(x, s, opts.label);
+  const c = s / 2, r = c - 12;
+  x.save(); x.translate(c, c);
+  x.strokeStyle = cssv("--ink-3"); x.fillStyle = cssv("--ink-2");
+  x.font = "500 10px 'IBM Plex Mono', monospace"; x.textAlign = "center"; x.textBaseline = "middle";
+  opts.ticks.forEach(t => {
+    const rad = (t.a - 90) * Math.PI / 180;
+    x.lineWidth = t.major ? 2 : 1;
+    x.strokeStyle = t.color || cssv("--ink-3");
+    const len = t.major ? 9 : 5;
+    x.beginPath();
+    x.moveTo(Math.cos(rad) * r, Math.sin(rad) * r);
+    x.lineTo(Math.cos(rad) * (r - len), Math.sin(rad) * (r - len));
+    x.stroke();
+    if (t.label !== undefined) {
+      x.fillStyle = t.color || cssv("--ink-2");
+      x.fillText(t.label, Math.cos(rad) * (r - 19), Math.sin(rad) * (r - 19));
+    }
+  });
+  (opts.needles || []).forEach(n => {
+    x.save(); x.rotate(n.a * Math.PI / 180);
+    x.strokeStyle = n.color || cssv("--ink"); x.lineWidth = n.w || 3; x.lineCap = "round";
+    x.beginPath(); x.moveTo(0, n.back || 8); x.lineTo(0, -(r - (n.gap || 6))); x.stroke();
+    x.restore();
+  });
+  x.beginPath(); x.arc(0, 0, 3.4, 0, 7); x.fillStyle = cssv("--ink"); x.fill();
+  if (opts.center) {
+    x.fillStyle = cssv("--data"); x.font = "500 11px 'IBM Plex Mono', monospace";
+    x.fillText(opts.center, 0, r * .48);
+  }
+  x.restore();
+  Inst.bezel2(x, s);
+};
+Inst.asi = (x, s, kt) => {
+  const ticks = [];
+  for (let v = 40; v <= 200; v += 10) ticks.push({ a: (v - 40) * 2, major: v % 20 === 0, label: v % 40 === 0 ? String(v) : undefined,
+    color: v >= 160 ? cssv("--warn") : v >= 60 && v < 160 ? cssv("--ok") : undefined });
+  Inst.dial(x, s, { label: "Airspeed kt", ticks, needles: [{ a: (clamp(kt, 40, 200) - 40) * 2 }] });
+};
+Inst.alt = (x, s, ft) => {
+  const ticks = [];
+  for (let v = 0; v < 10; v++) ticks.push({ a: v * 36, major: true, label: String(v) });
+  const hundreds = (ft % 1000) / 1000 * 360, thousands = (ft % 10000) / 10000 * 360;
+  Inst.dial(x, s, { label: "Altitude ft", ticks,
+    needles: [{ a: thousands, w: 4.5, gap: 26 }, { a: hundreds, w: 2.6, gap: 4 }] });
+};
+Inst.vsi = (x, s, fpm) => {
+  /* Zero points to 9 o'clock; full scale is 2000 fpm over 90 degrees each way.
+     Fine 100 fpm graduation only in the inner range, as on a real instrument. */
+  const ang = v => 270 + (v / 2000) * 90;
+  const ticks = [];
+  for (let v = -2000; v <= 2000; v += 100) {
+    const fine = Math.abs(v) <= 1000;
+    if (!fine && v % 500 !== 0) continue;
+    const major = v % 500 === 0;
+    ticks.push({ a: ang(v), major, label: v % 1000 === 0 ? String(Math.abs(v) / 1000) : undefined });
+  }
+  Inst.dial(x, s, { label: "vsi", ticks, needles: [{ a: ang(clamp(fpm, -2000, 2000)) }] });
+};
+Inst.dg = (x, s, hdg) => {
+  const ticks = [];
+  for (let d = 0; d < 360; d += 10) ticks.push({ a: d - hdg, major: d % 30 === 0,
+    label: d % 30 === 0 ? ({ 0: "N", 90: "E", 180: "S", 270: "W" }[d] || String(d / 10)) : undefined });
+  Inst.bezel(x, s, "Heading");
+  const c = s / 2, r = c - 12;
+  x.save(); x.translate(c, c);
+  x.font = "500 10px 'IBM Plex Mono', monospace"; x.textAlign = "center"; x.textBaseline = "middle";
+  ticks.forEach(t => {
+    const rad = (t.a - 90) * Math.PI / 180;
+    x.strokeStyle = cssv("--ink-3"); x.lineWidth = t.major ? 2 : 1;
+    const len = t.major ? 9 : 5;
+    x.beginPath(); x.moveTo(Math.cos(rad) * r, Math.sin(rad) * r); x.lineTo(Math.cos(rad) * (r - len), Math.sin(rad) * (r - len)); x.stroke();
+    if (t.label !== undefined) { x.fillStyle = cssv("--ink-2"); x.fillText(t.label, Math.cos(rad) * (r - 20), Math.sin(rad) * (r - 20)); }
+  });
+  x.strokeStyle = cssv("--caution"); x.lineWidth = 3; x.lineCap = "round";
+  x.beginPath(); x.moveTo(0, 10); x.lineTo(0, -14); x.moveTo(-11, -2); x.lineTo(11, -2); x.moveTo(-5, 9); x.lineTo(5, 9); x.stroke();
+  x.fillStyle = cssv("--data");
+  x.beginPath(); x.moveTo(0, -r - 1); x.lineTo(-5, -r + 8); x.lineTo(5, -r + 8); x.closePath(); x.fill();
+  x.restore();
+  Inst.bezel2(x, s);
+};
+Inst.turn = (x, s, rate, slip) => {
+  Inst.bezel(x, s, "Turn coordinator");
+  const c = s / 2, r = c - 12;
+  x.save(); x.translate(c, c);
+  x.strokeStyle = cssv("--ink-3"); x.lineWidth = 2;
+  [-30, -15, 15, 30].forEach(a => {
+    const rad = (a - 90) * Math.PI / 180;
+    x.beginPath(); x.moveTo(Math.cos(rad) * r, Math.sin(rad) * r); x.lineTo(Math.cos(rad) * (r - 9), Math.sin(rad) * (r - 9)); x.stroke();
+  });
+  x.save(); x.rotate(clamp(rate, -2.2, 2.2) * 15 * Math.PI / 180);
+  x.strokeStyle = cssv("--ink"); x.lineWidth = 3.4; x.lineCap = "round";
+  x.beginPath(); x.moveTo(-r * .72, 0); x.lineTo(r * .72, 0); x.stroke();
+  x.beginPath(); x.moveTo(0, -6); x.lineTo(0, -r * .34); x.stroke();
+  x.beginPath(); x.arc(0, 0, 4, 0, 7); x.fillStyle = cssv("--ink"); x.fill();
+  x.restore();
+  const by = r * .60;
+  x.strokeStyle = cssv("--line"); x.lineWidth = 1.5;
+  x.beginPath(); x.moveTo(-7, by - 8); x.lineTo(-7, by + 8); x.moveTo(7, by - 8); x.lineTo(7, by + 8); x.stroke();
+  x.beginPath(); x.arc(clamp(slip, -1.6, 1.6) * 9, by, 4.4, 0, 7); x.fillStyle = cssv("--ink-2"); x.fill();
+  x.restore();
+  Inst.bezel2(x, s);
+};
+</script>
+<script>
+/* ═══ Räumliche Orientierung – Fluglagen ════════════════════════════ */
+const BANKS = { 1: [30, 45, 60], 2: [15, 30, 45, 60, 75], 3: [10, 20, 30, 45, 60, 75, 90] };
+const PITCHES = { 1: [15, 25], 2: [10, 15, 20, 30], 3: [8, 12, 18, 25, 35] };
+
+function attitudeQuestion() {
+  const L = lvl();
+  const bank = pick(BANKS[L]) * pick([-1, 1]);
+  const pitch = pick(PITCHES[L]) * pick([-1, 1]);
+  const reverse = Math.random() < .35;
+
+  /* Mirrored pitch / bank are the classic confusions; level 3 adds a
+     same-sign option that differs only in magnitude. */
+  let cand = [{ p: pitch, b: bank }, { p: pitch, b: -bank }, { p: -pitch, b: bank }, { p: -pitch, b: -bank }];
+  if (L === 3) {
+    const others = BANKS[3].filter(v => v !== Math.abs(bank));
+    cand[3] = { p: pitch, b: Math.sign(bank) * pick(others) };
+  }
+  const opts = shuffle(cand);
+  const desc = (p, b) => (p > 0 ? "Steigflug" : "Sinkflug") + ", " + Math.abs(b) + "° Schräglage " + (b > 0 ? "rechts" : "links");
+
+  if (!reverse) {
+    return {
+      eyebrow: "Fluglage aus dem künstlichen Horizont ableiten",
+      plain: "Künstlicher Horizont: " + desc(pitch, bank),
+      render: node => {
+        const w = el("div", { class: "instwrap" });
+        canvasFor(w, 200, (x, s) => Inst.adi(x, s, pitch, bank));
+        node.appendChild(w);
+      },
+      stem: "Welche Darstellung zeigt die Fluglage dieses Flugzeugs – <b>von hinten gesehen</b>?",
+      optionLayout: "two",
+      options: opts.map(o => ({
+        plain: desc(o.p, o.b), ok: o.p === pitch && o.b === bank,
+        render: n => { const w = el("div", { style: "display:flex;justify-content:center" }); canvasFor(w, 138, (x, s) => Inst.planeRear(x, s, o.p, o.b)); n.appendChild(w); }
+      })),
+      explain: `Der Horizont dreht sich <b>entgegen</b> der Schräglage: Die Bodenfläche liegt hier ${bank > 0 ? "rechts" : "links"} &rarr; ${Math.abs(bank)}° nach <b>${bank > 0 ? "rechts" : "links"}</b> geneigt.<br>Der Horizont liegt ${pitch > 0 ? "unter" : "über"} dem Flugzeugsymbol &rarr; Nase ${pitch > 0 ? "oben" : "unten"} (${pitch > 0 ? "Steigflug" : "Sinkflug"}).<br>Von hinten betrachtet zeigt die Silhouette ${pitch > 0 ? "die Unterseite" : "die Oberseite"}, die ${bank > 0 ? "rechte" : "linke"} Tragfläche liegt tiefer.`
+    };
+  }
+  return {
+    eyebrow: "Künstlichen Horizont zur Fluglage finden",
+    plain: "Fluglage von hinten: " + desc(pitch, bank),
+    render: node => {
+      const w = el("div", { class: "instwrap" });
+      canvasFor(w, 190, (x, s) => Inst.planeRear(x, s, pitch, bank));
+      node.appendChild(w);
+    },
+    stem: "Das Flugzeug ist <b>von hinten</b> dargestellt. Welcher künstliche Horizont gehört zu dieser Fluglage?",
+    optionLayout: "two",
+    options: opts.map(o => ({
+      plain: desc(o.p, o.b), ok: o.p === pitch && o.b === bank,
+      render: n => { const w = el("div", { style: "display:flex;justify-content:center" }); canvasFor(w, 138, (x, s) => Inst.adi(x, s, o.p, o.b)); n.appendChild(w); }
+    })),
+    explain: `Die ${bank > 0 ? "rechte" : "linke"} Tragfläche liegt tiefer &rarr; ${Math.abs(bank)}° Schräglage ${bank > 0 ? "rechts" : "links"}. Im Horizont erscheint der Boden deshalb ${bank > 0 ? "rechts" : "links"}.<br>Sichtbar ist die ${pitch > 0 ? "Unterseite &rarr; Nase oben" : "Oberseite &rarr; Nase unten"}; der Horizont liegt entsprechend ${pitch > 0 ? "unter" : "über"} dem Flugzeugsymbol.`
+  };
+}
+
+/* ═══ Instrumentenablesen ═══════════════════════════════════════════ */
+function instrumentQuestion() {
+  const kind = pick(["asi", "alt", "dg", "vsi", "turn", "adi", "sixpack"]);
+  const size = 190;
+  const one = (drawer, stem, v, opt) => ({
+    eyebrow: "Instrument ablesen", plain: stem.replace(/<[^>]+>/g, ""),
+    render: node => { const w = el("div", { class: "instwrap" }); instFig(w, size, drawer, opt.caption); node.appendChild(w); },
+    stem, numericOpts: true, options: numOptions(v, opt), explain: opt.explain
+  });
+
+  if (kind === "asi") {
+    const kt = ri(5, 19) * 10;
+    return one((x, s) => Inst.asi(x, s, kt), "Welche <b>Fahrt</b> zeigt der Fahrtmesser an?", kt,
+      { unit: "kt", step: 10, caption: "Fahrtmesser", explain: `Der Zeiger steht auf <b>${kt} kt</b>. Der grüne Bogen markiert den normalen Betriebsbereich, der rote Strich die nie zu überschreitende Geschwindigkeit.` });
+  }
+  if (kind === "alt") {
+    const ft = ri(2, 96) * 100;
+    return one((x, s) => Inst.alt(x, s, ft), "Welche <b>Höhe</b> zeigt der Höhenmesser an?", ft,
+      { unit: "ft", step: 100, caption: "Höhenmesser", explain: `Der lange Zeiger zählt Hunderter, der kurze Tausender.<br>Kurzer Zeiger auf ${Math.floor(ft / 1000)}, langer Zeiger auf ${(ft % 1000) / 100} &rarr; <b>${ft} ft</b>.` });
+  }
+  if (kind === "dg") {
+    const hdg = ri(1, 35) * 10;
+    return one((x, s) => Inst.dg(x, s, hdg), "Welchen <b>Steuerkurs</b> zeigt der Kurskreisel an?", hdg,
+      { unit: "°", step: 10, caption: "Kurskreisel", explain: `Abgelesen wird am Index oben: <b>${pad(hdg, 3)}°</b>. Die Ziffern der Skala stehen für Zehner (z. B. „12“ = 120°).` });
+  }
+  if (kind === "vsi") {
+    const fpm = pick([-1500, -1000, -800, -500, -300, 300, 500, 800, 1000, 1500]);
+    return one((x, s) => Inst.vsi(x, s, fpm), "Welche <b>Vertikalgeschwindigkeit</b> wird angezeigt?", fpm,
+      { unit: "ft/min", step: 200, positive: false, caption: "Variometer", explain: `Der Zeiger steht bei <b>${fpm > 0 ? "+" : ""}${fpm} ft/min</b> – das Flugzeug ${fpm > 0 ? "steigt" : "sinkt"}. Die Skala ist in Tausendern beschriftet.` });
+  }
+  if (kind === "turn") {
+    const rate = pick([-2, -1, -0.5, 0.5, 1, 2]);
+    const slip = pick([-1.2, -0.6, 0, 0, 0.6, 1.2]);
+    const right = (rate > 0 ? "Rechtskurve" : "Linkskurve") + (Math.abs(rate) >= 1 ? " mit Standardrate" : " flach") + ", " +
+      (Math.abs(slip) < .2 ? "koordiniert" : (Math.sign(slip) === Math.sign(rate) ? "schiebend (Ball außen)" : "rutschend (Ball innen)"));
+    const wrongs = [
+      (rate > 0 ? "Linkskurve" : "Rechtskurve") + ", koordiniert",
+      (rate > 0 ? "Rechtskurve" : "Linkskurve") + ", " + (Math.abs(slip) < .2 ? "schiebend (Ball außen)" : "koordiniert"),
+      "Geradeausflug mit Schiebewinkel"
+    ];
+    return {
+      eyebrow: "Instrument ablesen", plain: "Wendezeiger: " + right,
+      render: node => { const w = el("div", { class: "instwrap" }); instFig(w, size, (x, s) => Inst.turn(x, s, rate, slip), "Wendezeiger"); node.appendChild(w); },
+      stem: "Was zeigt der <b>Wendezeiger</b> an?",
+      options: textOptions(right, wrongs),
+      explain: `Die Flugzeugsilhouette ist nach ${rate > 0 ? "rechts" : "links"} geneigt &rarr; ${rate > 0 ? "Rechts" : "Links"}kurve. ${Math.abs(slip) < .2 ? "Die Kugel steht mittig – die Kurve ist koordiniert." : "Die Kugel ist aus der Mitte gelaufen – Seitenruder in Richtung der Kugel („step on the ball“)."}`
+    };
+  }
+  if (kind === "adi") {
+    const bank = pick([0, 15, 30, 45]) * pick([-1, 1]);
+    const pitch = pick([0, 5, 10, 15]) * pick([-1, 1]);
+    const d = (bank === 0 ? "Wings level" : Math.abs(bank) + "° " + (bank > 0 ? "rechts" : "links")) + ", " +
+      (pitch === 0 ? "Nase auf dem Horizont" : Math.abs(pitch) + "° Nase " + (pitch > 0 ? "oben" : "unten"));
+    const wrongs = [
+      (bank === 0 ? "15° rechts" : Math.abs(bank) + "° " + (bank > 0 ? "links" : "rechts")) + ", " + (pitch === 0 ? "Nase auf dem Horizont" : Math.abs(pitch) + "° Nase " + (pitch > 0 ? "oben" : "unten")),
+      (bank === 0 ? "Wings level" : Math.abs(bank) + "° " + (bank > 0 ? "rechts" : "links")) + ", " + (pitch === 0 ? "10° Nase oben" : Math.abs(pitch) + "° Nase " + (pitch > 0 ? "unten" : "oben")),
+      (bank === 0 ? "30° links" : (Math.abs(bank) === 45 ? "30" : "45") + "° " + (bank > 0 ? "rechts" : "links")) + ", " + (pitch === 0 ? "5° Nase unten" : (Math.abs(pitch) === 15 ? "5" : "15") + "° Nase " + (pitch > 0 ? "oben" : "unten"))
+    ];
+    return {
+      eyebrow: "Instrument ablesen", plain: "Künstlicher Horizont: " + d,
+      render: node => { const w = el("div", { class: "instwrap" }); instFig(w, size, (x, s) => Inst.adi(x, s, pitch, bank), "Künstlicher Horizont"); node.appendChild(w); },
+      stem: "Welche Fluglage zeigt der künstliche Horizont?",
+      options: textOptions(d, wrongs),
+      explain: `Die Schräglage wird am Zeiger auf der oberen Skala abgelesen, die Längsneigung an der Lage des Flugzeugsymbols zur Horizontlinie (eine große Teilung = 10°).`
+    };
+  }
+  /* six-pack scan */
+  const climbing = pick([-1, 0, 1]);
+  const turning = pick([-1, 0, 1]);
+  const kt = ri(8, 17) * 10, ft = ri(10, 80) * 100, hdg = ri(0, 35) * 10;
+  const fpm = climbing * pick([500, 800, 1000]);
+  const pitchV = climbing * pick([5, 10]);
+  const bankV = turning * 25;
+  const right = (climbing > 0 ? "Steigflug" : climbing < 0 ? "Sinkflug" : "Horizontalflug") + " im " +
+    (turning > 0 ? "Rechtskurvenflug" : turning < 0 ? "Linkskurvenflug" : "Geradeausflug");
+  const wrongs = shuffle([
+    "Steigflug im Linkskurvenflug", "Sinkflug im Rechtskurvenflug", "Horizontalflug im Geradeausflug",
+    "Sinkflug im Linkskurvenflug", "Steigflug im Rechtskurvenflug", "Horizontalflug im Rechtskurvenflug"
+  ]).filter(w => w !== right);
+  return {
+    eyebrow: "Instrumentenscan", plain: "Six-Pack: " + right,
+    render: node => {
+      const w = el("div", { class: "sixpack" });
+      instFig(w, 138, (x, s) => Inst.asi(x, s, kt), "Fahrtmesser");
+      instFig(w, 138, (x, s) => Inst.adi(x, s, pitchV, bankV), "Künstlicher Horizont");
+      instFig(w, 138, (x, s) => Inst.alt(x, s, ft), "Höhenmesser");
+      instFig(w, 138, (x, s) => Inst.turn(x, s, turning * 1.6, 0), "Wendezeiger");
+      instFig(w, 138, (x, s) => Inst.dg(x, s, hdg), "Kurskreisel");
+      instFig(w, 138, (x, s) => Inst.vsi(x, s, fpm), "Variometer");
+      node.appendChild(el("div", { class: "gridwrap" }, [w]));
+    },
+    stem: "Was macht das Flugzeug laut Instrumentenanzeige?",
+    options: textOptions(right, wrongs),
+    explain: `Variometer ${fpm > 0 ? "+" : ""}${fpm} ft/min und die Längsneigung im Horizont ergeben ${climbing > 0 ? "Steigflug" : climbing < 0 ? "Sinkflug" : "Horizontalflug"}. Schräglage und Wendezeiger ergeben ${turning > 0 ? "eine Rechtskurve" : turning < 0 ? "eine Linkskurve" : "Geradeausflug"}.`
+  };
+}
+</script>
+<script>
+/* ═══ Merkfähigkeit – Flugplan einprägen ════════════════════════════ */
+const DESTS = [["VIE","Wien"],["ZRH","Zürich"],["FRA","Frankfurt"],["MUC","München"],["BRU","Brüssel"],["CDG","Paris"],
+  ["LHR","London"],["FCO","Rom"],["MXP","Mailand"],["ARN","Stockholm"],["CPH","Kopenhagen"],["WAW","Warschau"],
+  ["OTP","Bukarest"],["SOF","Sofia"],["TLV","Tel Aviv"],["SVO","Moskau"],["BCN","Barcelona"],["AMS","Amsterdam"],
+  ["DUS","Düsseldorf"],["HAM","Hamburg"],["PRG","Prag"],["BUD","Budapest"],["ATH","Athen"],["IST","Istanbul"]];
+const RWYS = ["11", "16", "29", "34"];
+
+function makeFlightPlan(rows) {
+  const dests = sample(DESTS, rows);
+  const nums = shuffle(Array.from({ length: 60 }, (_, i) => 100 + i * 7)).slice(0, rows);
+  return dests.map((d, i) => ({
+    flt: "OS " + nums[i],
+    iata: d[0], city: d[1],
+    gate: pick("ABCDEFG".split("")) + ri(1, 9),
+    rwy: pick(RWYS),
+    fl: pick([240, 260, 280, 300, 310, 320, 340, 360, 380, 390]),
+    freq: (118 + ri(0, 17)) + "." + pad(pick([0, 25, 50, 75, 5, 30, 55, 80])),
+    dep: pad(ri(6, 21)) + ":" + pad(pick([0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55]))
+  }));
+}
+function planQuestions(plan, n) {
+  const qs = [];
+  const cols = [
+    { k: "city", label: "Ziel", ask: r => `Wohin fliegt <b>${r.flt}</b>?`, val: r => r.city + " (" + r.iata + ")", pool: () => DESTS.map(d => d[1] + " (" + d[0] + ")") },
+    { k: "gate", label: "Gate", ask: r => `Von welchem <b>Gate</b> geht <b>${r.flt}</b> ab?`, val: r => r.gate, pool: () => { const a = []; "ABCDEFG".split("").forEach(l => { for (let i = 1; i < 10; i++) a.push(l + i); }); return a; } },
+    { k: "fl", label: "Flugfläche", ask: r => `Welche <b>Flugfläche</b> ist für <b>${r.flt}</b> geplant?`, val: r => "FL" + r.fl, pool: () => [240, 260, 280, 300, 310, 320, 340, 360, 380, 390].map(v => "FL" + v) },
+    { k: "freq", label: "Frequenz", ask: r => `Welche <b>Frequenz</b> ist für <b>${r.flt}</b> eingetragen?`, val: r => r.freq, pool: () => { const a = []; for (let i = 0; i < 40; i++) a.push((118 + ri(0, 17)) + "." + pad(pick([0, 25, 50, 75, 5, 30, 55, 80]))); return a; } },
+    { k: "rwy", label: "Piste", ask: r => `Von welcher <b>Piste</b> startet <b>${r.flt}</b>?`, val: r => r.rwy, pool: () => RWYS },
+    { k: "dep", label: "Abflug", ask: r => `Wann ist der <b>Abflug</b> von <b>${r.flt}</b>?`, val: r => r.dep, pool: () => { const a = []; for (let i = 0; i < 40; i++) a.push(pad(ri(6, 21)) + ":" + pad(pick([0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55]))); return a; } }
+  ];
+  /* Every (row, column) pair is asked at most once. */
+  const pairs = shuffle([].concat.apply([], plan.map(r => cols.map(col => ({ r, col }))))).slice(0, n);
+  for (let i = 0; i < pairs.length; i++) {
+    const r = pairs[i].r, col = pairs[i].col;
+    const right = col.val(r);
+    const others = plan.filter(o => o !== r).map(col.val).filter(v => v !== right);
+    const pool = col.pool().filter(v => v !== right);
+    const wrongs = shuffle(others.concat(shuffle(pool))).filter((v, ix, arr) => arr.indexOf(v) === ix).slice(0, 3);
+    while (wrongs.length < 3) wrongs.push(pick(pool));
+    qs.push({
+      eyebrow: "Abfrage · " + col.label, stem: col.ask(r), plain: col.ask(r).replace(/<[^>]+>/g, ""),
+      numericOpts: col.k !== "city", options: textOptions(right, wrongs),
+      explain: `Im Flugplan stand: <b>${r.flt} &middot; ${r.city} (${r.iata}) &middot; Gate ${r.gate} &middot; Piste ${r.rwy} &middot; FL${r.fl} &middot; ${r.freq} &middot; ${r.dep}</b>.`
+    });
+  }
+  return qs;
+}
+
+function studyScreen(plan, seconds) {
+  return new Promise(resolve => {
+    const root = el("div", { class: "stage" });
+    const head = el("div", { class: "qhead" }, [
+      el("div", { class: "qcount", text: "EINPRÄGEN" }), el("div", { class: "clock mono" })
+    ]);
+    const clock = $(".clock", head);
+    const tbar = el("div", { class: "tbar" }, [el("i")]);
+    const card = el("div", { class: "card qcard" });
+    card.appendChild(el("div", { class: "lbl", text: "Abflugplan · Vienna International", style: "margin-bottom:12px" }));
+    const gw = el("div", { class: "gridwrap" });
+    const tbl = el("table", { class: "memtable" });
+    tbl.innerHTML = "<thead><tr><th>Flug</th><th>Ziel</th><th>Gate</th><th>Piste</th><th>FL</th><th>Frequenz</th><th>Abflug</th></tr></thead><tbody>" +
+      plan.map(r => `<tr><td>${r.flt}</td><td>${esc(r.city)} (${r.iata})</td><td>${r.gate}</td><td>${r.rwy}</td><td>${r.fl}</td><td>${r.freq}</td><td>${r.dep}</td></tr>`).join("") + "</tbody>";
+    gw.appendChild(tbl); card.appendChild(gw);
+    card.appendChild(el("div", { class: "qsub", text: "Alle Spalten werden abgefragt. Notizen sind nicht erlaubt.", style: "margin-top:14px" }));
+    root.append(head, tbar, card);
+    view().innerHTML = ""; view().appendChild(root);
+
+    const total = seconds * 1000, t0 = performance.now();
+    let iv = setInterval(() => {
+      const left = total - (performance.now() - t0), frac = clamp(left / total, 0, 1);
+      clock.textContent = fmtClock(left);
+      const bar = tbar.firstChild;
+      bar.style.width = (frac * 100) + "%";
+      const cls = frac < .17 ? "crit" : frac < .34 ? "low" : "";
+      bar.className = cls; clock.className = "clock mono " + cls;
+      setStrip([{ k: "Phase", v: "EINPRÄGEN" }, { k: "Zeilen", v: String(plan.length) }, { k: "Restzeit", v: fmtClock(left), tone: frac < .34 ? "caution" : "" }]);
+      if (left <= 0) { clearInterval(iv); done(); }
+    }, 200);
+    const done = () => { clearInterval(iv); document.onkeydown = null; resolve(); };
+    State.running = { abort: () => clearInterval(iv) };
+    const foot = el("div", { class: "qfoot" }, [
+      el("button", { class: "btn sm", text: "Weiter zur Abfrage", onclick: done }),
+      el("div", { class: "hintk", text: "Enter" })
+    ]);
+    card.appendChild(foot);
+    document.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); done(); } if (e.key === "Escape") { clearInterval(iv); go("home"); } };
+  });
+}
+
+async function runMemory() {
+  const rows = { 1: 5, 2: 6, 3: 8 }[lvl()];
+  const secs = { 1: 55, 2: 40, 3: 30 }[lvl()];
+  const n = { 1: 6, 2: 8, 3: 10 }[lvl()];
+  const plan = makeFlightPlan(rows);
+  const qs = planQuestions(plan, n);
+  await studyScreen(plan, secs);
+  return runQuiz({ count: qs.length, perQ: 18, next: i => qs[i] });
+}
+
+/* ═══ Konzentration – Zielsuche (d2-Prinzip) ════════════════════════ */
+function runConcentration() {
+  return new Promise(resolve => {
+    const conf = { 1: { cols: 12, rows: 6, secs: 75 }, 2: { cols: 14, rows: 8, secs: 70 }, 3: { cols: 16, rows: 9, secs: 65 } }[lvl()];
+    const N = conf.cols * conf.rows;
+    const cells = [];
+    for (let i = 0; i < N; i++) {
+      const letter = Math.random() < .5 ? "d" : "p";
+      const top = ri(0, 2), bot = ri(0, 2);
+      cells.push({ letter, top, bot, target: letter === "d" && top + bot === 2 });
+    }
+    const targets = cells.filter(c => c.target).length;
+    let hits = 0, falses = 0, done = false;
+
+    const root = el("div", { class: "stage wide" });
+    const head = el("div", { class: "qhead" }, [el("div", { class: "qcount", text: "ZIELSUCHE" }), el("div", { class: "clock mono" })]);
+    const clock = $(".clock", head);
+    const tbar = el("div", { class: "tbar" }, [el("i")]);
+    const card = el("div", { class: "card qcard" });
+    const legend = el("div", { class: "target-legend" });
+    legend.appendChild(el("div", { class: "lbl", text: "Zielzeichen" }));
+    ["d|1|1", "d|2|0", "d|0|2"].forEach(spec => {
+      const [l, t, b] = spec.split("|");
+      legend.appendChild(markCell(l, +t, +b, "tg"));
+    });
+    legend.appendChild(el("div", { class: "note", style: "max-width:30ch;text-align:left", text: "Jedes „d“ mit genau zwei Strichen – gleichgültig ob oben, unten oder verteilt. Alles andere ist kein Ziel." }));
+    card.appendChild(legend);
+    const grid = el("div", { class: "scan", style: `grid-template-columns:repeat(${conf.cols},38px)` });
+    const gw = el("div", { class: "gridwrap" }); gw.appendChild(grid); card.appendChild(gw);
+    const foot = el("div", { class: "qfoot" }, [
+      el("button", { class: "btn sm", text: "Fertig", onclick: () => finish() }),
+      el("div", { class: "hintk", text: "Alle Zielzeichen anklicken – Fehlklicks zählen negativ" })
+    ]);
+    card.appendChild(foot);
+    root.append(head, tbar, card);
+    view().innerHTML = ""; view().appendChild(root);
+
+    cells.forEach(c => {
+      const b = markCell(c.letter, c.top, c.bot);
+      b.addEventListener("click", () => {
+        if (done || c.clicked) return;
+        c.clicked = true;
+        if (c.target) { hits++; b.classList.add("hit"); } else { falses++; b.classList.add("miss"); }
+        update();
+      });
+      grid.appendChild(b); c.node = b;
+    });
+
+    const total = conf.secs * 1000, t0 = performance.now();
+    const iv = setInterval(() => {
+      const left = total - (performance.now() - t0), frac = clamp(left / total, 0, 1);
+      clock.textContent = fmtClock(left);
+      const bar = tbar.firstChild; bar.style.width = (frac * 100) + "%";
+      const cls = frac < .17 ? "crit" : frac < .34 ? "low" : "";
+      bar.className = cls; clock.className = "clock mono " + cls;
+      update(left);
+      if (left <= 0) finish();
+    }, 200);
+    State.running = { abort: () => { done = true; clearInterval(iv); } };
+
+    function update(left) {
+      setStrip([
+        { k: "Treffer", v: hits + "/" + targets },
+        { k: "Fehler", v: String(falses), tone: falses > 0 ? "caution" : "" },
+        { k: "Restzeit", v: fmtClock(left === undefined ? total - (performance.now() - t0) : left) }
+      ]);
+    }
+    function finish() {
+      if (done) return;
+      done = true; clearInterval(iv);
+      cells.forEach(c => { if (c.target && !c.clicked) c.node.classList.add("shown"); });
+      const net = Math.max(0, hits - falses);
+      resolve({
+        correct: hits, total: targets, score: Math.round(net / targets * 100),
+        timeMs: performance.now() - t0,
+        detail: [
+          { q: "Gefundene Zielzeichen", your: hits + " von " + targets, right: String(targets), ok: hits === targets },
+          { q: "Fehlklicks auf Nichtziele", your: String(falses), right: "0", ok: falses === 0 },
+          { q: "Übersehene Zielzeichen", your: String(targets - hits), right: "0", ok: hits === targets }
+        ],
+        extra: { hits, falses, targets, missed: targets - hits }
+      });
+    }
+  });
+}
+function markCell(letter, top, bot, cls) {
+  const b = el(cls ? "div" : "button", cls ? { class: cls, "aria-hidden": "true" }
+    : { type: "button", style: "flex-direction:column;gap:0;line-height:1" });
+  /* Real strokes rather than apostrophes - above and below must read apart at a glance. */
+  const marks = (n, above) => {
+    const row = el("span", { style: "height:10px;display:flex;gap:3px;justify-content:center;align-items:" + (above ? "flex-end" : "flex-start") });
+    for (let i = 0; i < n; i++) row.appendChild(el("i", { style: "width:2px;height:7px;background:currentColor;display:block" }));
+    return row;
+  };
+  b.append(marks(top, true), el("span", { text: letter, style: "font-size:18px;height:20px;line-height:20px;display:block" }), marks(bot, false));
+  return b;
+}
+</script>
+<script>
+/* ═══ Wegverfolgung ═════════════════════════════════════════════════ */
+function catmull(pts) {
+  let d = `M ${pts[0][0]} ${pts[0][1]}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || pts[i + 1];
+    const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
+    const c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+    d += ` C ${round(c1[0],1)} ${round(c1[1],1)}, ${round(c2[0],1)} ${round(c2[1],1)}, ${p2[0]} ${round(p2[1],1)}`;
+  }
+  return d;
+}
+function traceQuestion() {
+  const n = { 1: 4, 2: 6, 3: 8 }[lvl()];
+  const cols = { 1: 3, 2: 4, 3: 5 }[lvl()];
+  const W = 660, rowH = 40, H = n * rowH + 30, padX = 46;
+  const slotY = i => 22 + i * rowH;
+  const perm = shuffle(Array.from({ length: n }, (_, i) => i));
+  const colX = Array.from({ length: cols }, (_, c) => padX + (W - 2 * padX) * (c + 1) / (cols + 1));
+  const colPerm = Array.from({ length: cols }, () => shuffle(Array.from({ length: n }, (_, i) => i)));
+  const paths = [];
+  for (let i = 0; i < n; i++) {
+    const pts = [[padX, slotY(i)]];
+    for (let c = 0; c < cols; c++) pts.push([colX[c], slotY(colPerm[c][i]) + (Math.random() - .5) * 10]);
+    pts.push([W - padX, slotY(perm[i])]);
+    paths.push(catmull(pts));
+  }
+  const LET = "ABCDEFGH".split("");
+  const askIx = ri(0, n - 1);
+  const right = String(perm[askIx] + 1);
+  const wrongs = shuffle(Array.from({ length: n }, (_, i) => String(i + 1)).filter(v => v !== right));
+  return {
+    eyebrow: "Wegverfolgung",
+    plain: `Linie ${LET[askIx]} verfolgen`,
+    render: node => {
+      const stroke = cssv("--ink-2"), lbl = cssv("--ink-3"), hi = cssv("--data");
+      const svg = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" style="max-width:100%;height:auto;display:block;margin:0 auto" role="img" aria-label="Liniendiagramm zum Verfolgen">
+        ${paths.map((d, i) => `<path d="${d}" fill="none" stroke="${i === askIx ? hi : stroke}" stroke-width="${i === askIx ? 2.4 : 1.7}" stroke-linecap="round"/>`).join("")}
+        ${Array.from({ length: n }, (_, i) => `<text x="${padX - 12}" y="${slotY(i) + 5}" text-anchor="end" fill="${i === askIx ? hi : lbl}" font-family="IBM Plex Mono, monospace" font-size="15" font-weight="${i === askIx ? 600 : 400}">${LET[i]}</text>`).join("")}
+        ${Array.from({ length: n }, (_, i) => `<text x="${W - padX + 12}" y="${slotY(i) + 5}" fill="${lbl}" font-family="IBM Plex Mono, monospace" font-size="15">${i + 1}</text>`).join("")}
+      </svg>`;
+      const box = el("div", { class: "gridwrap", html: svg, style: "padding:6px 0 12px" });
+      node.appendChild(box);
+    },
+    stem: `Bei welcher Ziffer endet die Linie <b>${LET[askIx]}</b>?`,
+    sub: "Nur mit den Augen verfolgen – nicht mit dem Finger oder dem Mauszeiger.",
+    numericOpts: true,
+    options: textOptions(right, wrongs),
+    explain: `Linie <b>${LET[askIx]}</b> führt zu <b>${right}</b>. Bewährt: an Kreuzungen die Richtung der Linie beibehalten und nicht auf die kreuzende Linie überspringen.`
+  };
+}
+
+/* ═══ Multitasking – drei parallele Kanäle ══════════════════════════ */
+function runMultitask() {
+  return new Promise(resolve => {
+    const conf = { 1: { secs: 70, drift: .45, gaugeEvery: 5200, mathEvery: 6500 },
+                   2: { secs: 95, drift: .75, gaugeEvery: 4000, mathEvery: 5000 },
+                   3: { secs: 120, drift: 1.10, gaugeEvery: 3000, mathEvery: 3800 } }[lvl()];
+    const root = el("div", { class: "stage wide" });
+    const head = el("div", { class: "qhead" }, [el("div", { class: "qcount", text: "MULTITASKING" }), el("div", { class: "clock mono" })]);
+    const clock = $(".clock", head);
+    const tbar = el("div", { class: "tbar" }, [el("i")]);
+    const layout = el("div", { class: "mt" });
+
+    /* Kanal 1 – Tracking */
+    const trackPanel = el("div", { class: "mtpanel" }, [el("div", { class: "lbl", text: "Kanal 1 · Kurshaltung" })]);
+    const trackHost = el("div", { style: "display:flex;justify-content:center" });
+    trackPanel.appendChild(trackHost);
+    const TS = 300;
+    const tc = el("canvas", { width: TS, height: TS, style: `width:${TS}px;height:${TS}px;max-width:100%` });
+    trackHost.appendChild(tc);
+    const dpad = el("div", { class: "dpad" });
+    [["◀", "l"], ["▲", "u"], ["▶", "r"], ["", ""], ["▼", "d"], ["", ""]].forEach(([t, k]) => {
+      if (!k) { dpad.appendChild(el("div")); return; }
+      const b = el("button", { type: "button", text: t, "aria-label": k });
+      const on = e => { e.preventDefault(); keys[k] = true; }, off = () => keys[k] = false;
+      b.addEventListener("pointerdown", on); b.addEventListener("pointerup", off);
+      b.addEventListener("pointerleave", off); b.addEventListener("pointercancel", off);
+      dpad.appendChild(b);
+    });
+    trackPanel.appendChild(dpad);
+    trackPanel.appendChild(el("div", { class: "note", style: "text-align:center;margin-top:6px", text: "Pfeiltasten oder W A S D – Punkt im Zielkreis halten" }));
+
+    /* Kanal 2 + 3 */
+    const side = el("div", { style: "display:flex;flex-direction:column;gap:14px" });
+    const gaugePanel = el("div", { class: "mtpanel" }, [el("div", { class: "lbl", text: "Kanal 2 · Systemüberwachung" })]);
+    const gaugeRow = el("div", { class: "gauges" });
+    const GN = ["ENG 1", "ENG 2", "HYD", "ELEC"];
+    const gauges = GN.map((nm, i) => {
+      const holder = el("div", { class: "gauge" });
+      const cv = el("canvas", { width: 90, height: 90 });
+      const kb = el("div", { class: "gk", text: nm + "  [" + (i + 1) + "]" });
+      holder.append(cv, kb);
+      holder.addEventListener("click", () => ack(i));
+      gaugeRow.appendChild(holder);
+      return { nm, cv, holder, val: 50, alert: false, since: 0, node: holder };
+    });
+    gaugePanel.appendChild(gaugeRow);
+    gaugePanel.appendChild(el("div", { class: "note", style: "margin-top:8px", text: "Verlässt ein Zeiger den grünen Bereich: zugehörige Zifferntaste drücken (oder Instrument antippen)." }));
+
+    const mathPanel = el("div", { class: "mtpanel" }, [el("div", { class: "lbl", text: "Kanal 3 · Rechenaufgabe" })]);
+    const mathBox = el("div", { class: "mtmath" });
+    mathBox.appendChild(el("div", { class: "note", text: "Die erste Aufgabe erscheint gleich." }));
+    mathPanel.appendChild(mathBox);
+
+    const scorePanel = el("div", { class: "mtpanel" }, [el("div", { class: "lbl", text: "Kanalleistung" })]);
+    const bars = el("div", { class: "chanbars" });
+    const barEls = ["Kurs", "Systeme", "Rechnen"].map(nm => {
+      const fill = el("i");
+      const row = el("div", { class: "chanbar" }, [el("div", { class: "nm", text: nm }), el("div", { class: "bar" }, [fill]), el("span", { text: "100" })]);
+      bars.appendChild(row);
+      return { fill, val: $("span", row) };
+    });
+    scorePanel.appendChild(bars);
+    side.append(gaugePanel, mathPanel, scorePanel);
+    layout.append(trackPanel, side);
+    root.append(head, tbar, layout);
+    view().innerHTML = ""; view().appendChild(root);
+
+    /* State */
+    const keys = { u: false, d: false, l: false, r: false };
+    let px = 0, py = 0, vx = 0, vy = 0;
+    let devSum = 0, devN = 0;
+    let gaugeEvents = 0, gaugeHits = 0, gaugeRT = [];
+    let mathAsked = 0, mathRight = 0, mathQ = null;
+    let nextGauge = performance.now() + 2500, nextMath = performance.now() + 3000;
+    let raf = null, running = true;
+    const t0 = performance.now(), total = conf.secs * 1000;
+
+    const kd = e => {
+      const k = e.key.toLowerCase();
+      if (k === "arrowup" || k === "w") { keys.u = true; e.preventDefault(); }
+      else if (k === "arrowdown" || k === "s") { keys.d = true; e.preventDefault(); }
+      else if (k === "arrowleft" || k === "a") { keys.l = true; e.preventDefault(); }
+      else if (k === "arrowright" || k === "d") { keys.r = true; e.preventDefault(); }
+      else if (k >= "1" && k <= "4") ack(parseInt(k, 10) - 1);
+      else if (k === "g") answerMath(true);
+      else if (k === "u") answerMath(false);
+      else if (k === "escape") { stop(); go("home"); }
+    };
+    const ku = e => {
+      const k = e.key.toLowerCase();
+      if (k === "arrowup" || k === "w") keys.u = false;
+      else if (k === "arrowdown" || k === "s") keys.d = false;
+      else if (k === "arrowleft" || k === "a") keys.l = false;
+      else if (k === "arrowright" || k === "d") keys.r = false;
+    };
+    window.addEventListener("keydown", kd); window.addEventListener("keyup", ku);
+
+    function ack(i) {
+      const g = gauges[i];
+      if (!running || !g || !g.alert) return;
+      g.alert = false; g.val = 50; g.node.classList.remove("alert");
+      gaugeHits++; gaugeRT.push(performance.now() - g.since);
+    }
+    function newMath() {
+      const a = ri(11, 79), b = ri(11, 79), op = pick(["+", "-"]);
+      const res = op === "+" ? a + b : a - b;
+      mathQ = { txt: `${a} ${op} ${b}`, even: Math.abs(res) % 2 === 0, born: performance.now() };
+      mathAsked++;
+      mathBox.innerHTML = "";
+      mathBox.append(
+        el("div", { class: "q", text: mathQ.txt + "  =  ?" }),
+        el("div", { class: "note", text: "Ist das Ergebnis gerade oder ungerade?" }),
+        el("div", { class: "mtkeys" }, [
+          el("button", { type: "button", text: "Gerade [G]", onclick: () => answerMath(true) }),
+          el("button", { type: "button", text: "Ungerade [U]", onclick: () => answerMath(false) })
+        ])
+      );
+    }
+    function answerMath(even) {
+      if (!running || !mathQ) return;
+      const ok = even === mathQ.even;
+      if (ok) mathRight++;
+      mathQ = null;
+      mathBox.innerHTML = "";
+      mathBox.append(el("div", { class: "q", style: `color:${ok ? "var(--ok)" : "var(--warn)"}`, text: ok ? "richtig" : "falsch" }));
+      nextMath = performance.now() + conf.mathEvery * (0.6 + Math.random() * 0.6);
+    }
+
+    const gctx = tc.getContext("2d");
+    function drawTrack() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      if (tc.width !== TS * dpr) { tc.width = TS * dpr; tc.height = TS * dpr; }
+      const x = gctx; x.setTransform(dpr, 0, 0, dpr, 0, 0);
+      x.clearRect(0, 0, TS, TS);
+      x.fillStyle = cssv("--panel-2"); x.fillRect(0, 0, TS, TS);
+      x.strokeStyle = cssv("--line-soft"); x.lineWidth = 1;
+      for (let i = 1; i < 6; i++) {
+        x.beginPath(); x.moveTo(TS * i / 6, 0); x.lineTo(TS * i / 6, TS); x.stroke();
+        x.beginPath(); x.moveTo(0, TS * i / 6); x.lineTo(TS, TS * i / 6); x.stroke();
+      }
+      const c = TS / 2, dev = Math.hypot(px, py);
+      x.strokeStyle = dev < 34 ? cssv("--ok") : dev < 68 ? cssv("--caution") : cssv("--warn");
+      x.lineWidth = 1.6;
+      x.beginPath(); x.arc(c, c, 34, 0, 7); x.stroke();
+      x.setLineDash([4, 5]); x.strokeStyle = cssv("--line");
+      x.beginPath(); x.arc(c, c, 68, 0, 7); x.stroke(); x.setLineDash([]);
+      x.strokeStyle = cssv("--ink-3"); x.lineWidth = 1;
+      x.beginPath(); x.moveTo(c - 12, c); x.lineTo(c + 12, c); x.moveTo(c, c - 12); x.lineTo(c, c + 12); x.stroke();
+      x.fillStyle = dev < 34 ? cssv("--ok") : dev < 68 ? cssv("--caution") : cssv("--warn");
+      x.beginPath(); x.arc(c + px, c + py, 7, 0, 7); x.fill();
+      x.strokeStyle = cssv("--panel"); x.lineWidth = 1.5; x.stroke();
+      x.strokeRect(.5, .5, TS - 1, TS - 1);
+    }
+    function drawGauge(g) {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2), S = 90;
+      if (g.cv.width !== S * dpr) { g.cv.width = S * dpr; g.cv.height = S * dpr; g.cv.style.width = S + "px"; g.cv.style.height = S + "px"; }
+      const x = g.cv.getContext("2d"); x.setTransform(dpr, 0, 0, dpr, 0, 0);
+      x.clearRect(0, 0, S, S);
+      const c = S / 2, r = c - 8;
+      x.beginPath(); x.arc(c, c, r, 0, 7); x.fillStyle = cssv("--panel-2"); x.fill();
+      x.lineWidth = 1.4; x.strokeStyle = g.alert ? cssv("--warn") : cssv("--line"); x.stroke();
+      x.beginPath(); x.arc(c, c, r - 5, Math.PI * .75 + Math.PI * 1.5 * .3, Math.PI * .75 + Math.PI * 1.5 * .7);
+      x.strokeStyle = cssv("--ok"); x.lineWidth = 3.4; x.stroke();
+      const a = Math.PI * .75 + Math.PI * 1.5 * clamp(g.val / 100, 0, 1);
+      x.strokeStyle = g.alert ? cssv("--warn") : cssv("--ink"); x.lineWidth = 2.4; x.lineCap = "round";
+      x.beginPath(); x.moveTo(c, c); x.lineTo(c + Math.cos(a) * (r - 9), c + Math.sin(a) * (r - 9)); x.stroke();
+      x.beginPath(); x.arc(c, c, 2.6, 0, 7); x.fillStyle = cssv("--ink"); x.fill();
+    }
+
+    let last = performance.now();
+    function loop(now) {
+      if (!running) return;
+      const dt = Math.min(80, now - last); last = now;
+      /* Tracking: a random gust field the pilot counteracts with the arrow keys.
+         Control authority is deliberately larger than the drift, so a steady
+         hand can hold the centre; scoring ignores the innermost few pixels. */
+      const acc = .050 * dt;
+      vx += (Math.random() - .5) * conf.drift * dt * .09;
+      vy += (Math.random() - .5) * conf.drift * dt * .09;
+      if (keys.l) vx -= acc; if (keys.r) vx += acc;
+      if (keys.u) vy -= acc; if (keys.d) vy += acc;
+      vx *= .90; vy *= .90;
+      px = clamp(px + vx * dt * .06, -TS / 2 + 10, TS / 2 - 10);
+      py = clamp(py + vy * dt * .06, -TS / 2 + 10, TS / 2 - 10);
+      devSum += clamp((Math.hypot(px, py) - 8) / 80, 0, 1); devN++;
+      drawTrack();
+
+      /* gauges drift, one at a time goes out of band */
+      if (now > nextGauge) {
+        const free = gauges.filter(g => !g.alert);
+        if (free.length) {
+          const g = pick(free);
+          g.alert = true; g.since = now; g.target = Math.random() < .5 ? ri(2, 16) : ri(84, 98);
+          g.node.classList.add("alert"); gaugeEvents++;
+        }
+        nextGauge = now + conf.gaugeEvery * (0.65 + Math.random() * 0.7);
+      }
+      gauges.forEach(g => {
+        if (g.alert) g.val += (g.target - g.val) * .06;
+        else g.val += (50 + (Math.random() - .5) * 14 - g.val) * .05;
+        drawGauge(g);
+      });
+      if (now > nextMath && !mathQ) newMath();
+
+      const left = total - (now - t0), frac = clamp(left / total, 0, 1);
+      clock.textContent = fmtClock(left);
+      const bar = tbar.firstChild; bar.style.width = (frac * 100) + "%";
+      const cls = frac < .17 ? "crit" : frac < .34 ? "low" : "";
+      bar.className = cls; clock.className = "clock mono " + cls;
+
+      const sTrack = Math.round(clamp(1 - devSum / Math.max(1, devN), 0, 1) * 100);
+      const sGauge = gaugeEvents ? Math.round(gaugeHits / gaugeEvents * 100) : 100;
+      const sMath = mathAsked ? Math.round(mathRight / mathAsked * 100) : 100;
+      [sTrack, sGauge, sMath].forEach((v, i) => {
+        barEls[i].fill.style.width = v + "%";
+        barEls[i].fill.style.background = v >= 75 ? cssv("--ok") : v >= 50 ? cssv("--caution") : cssv("--warn");
+        barEls[i].val.textContent = v;
+      });
+      setStrip([
+        { k: "Kurs", v: sTrack + "%", tone: sTrack < 50 ? "warn" : sTrack < 75 ? "caution" : "" },
+        { k: "Systeme", v: gaugeHits + "/" + gaugeEvents },
+        { k: "Rechnen", v: mathRight + "/" + mathAsked },
+        { k: "Restzeit", v: fmtClock(left) }
+      ]);
+      if (left <= 0) return finish();
+      raf = requestAnimationFrame(loop);
+    }
+    function stop() {
+      running = false;
+      if (raf) cancelAnimationFrame(raf);
+      window.removeEventListener("keydown", kd); window.removeEventListener("keyup", ku);
+    }
+    State.running = { abort: stop };
+    function finish() {
+      stop();
+      const sTrack = Math.round(clamp(1 - devSum / Math.max(1, devN), 0, 1) * 100);
+      const sGauge = gaugeEvents ? Math.round(gaugeHits / gaugeEvents * 100) : 0;
+      const sMath = mathAsked ? Math.round(mathRight / mathAsked * 100) : 0;
+      const rt = gaugeRT.length ? Math.round(gaugeRT.reduce((a, b) => a + b, 0) / gaugeRT.length) : 0;
+      resolve({
+        correct: gaugeHits + mathRight, total: gaugeEvents + mathAsked,
+        score: Math.round(sTrack * .4 + sGauge * .35 + sMath * .25),
+        timeMs: performance.now() - t0,
+        detail: [
+          { q: "Kurshaltung (mittlere Abweichung vom Zielkreis)", your: sTrack + " %", right: "100 %", ok: sTrack >= 75 },
+          { q: "Systemwarnungen quittiert", your: gaugeHits + " von " + gaugeEvents, right: gaugeEvents + " von " + gaugeEvents, ok: gaugeHits === gaugeEvents },
+          { q: "Mittlere Reaktionszeit auf Warnungen", your: rt ? rt + " ms" : "keine Reaktion", right: "< 1500 ms", ok: rt > 0 && rt < 1500 },
+          { q: "Rechenaufgaben nebenher", your: mathRight + " von " + mathAsked, right: mathAsked + " von " + mathAsked, ok: mathRight === mathAsked }
+        ]
+      });
+    }
+    drawTrack(); gauges.forEach(drawGauge);
+    raf = requestAnimationFrame(loop);
+  });
+}
+</script>
+<script>
+/* ═══ Module registry ═══════════════════════════════════════════════ */
+const ic = d => `<svg width="19" height="19" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+const MODULES = [
+  { id: "math", name: "Kopfrechnen", kind: "Rechnen unter Zeitdruck", count: 12, perQ: 45,
+    icon: ic('<path d="M3 6h5M5.5 3.5v5M12 5.5h5M12 14.5h5M12 12l4.5 4.5M16.5 12L12 16.5M3 15h5"/>'),
+    desc: "Fliegerische Überschlagsrechnungen und Grundrechenarten ohne Hilfsmittel – Zeit-Weg-Geschwindigkeit, Treibstoff, Sinkprofile, Einheiten.",
+    what: "Getestet wird sicheres, schnelles Kopfrechnen unter Zeitdruck. Es geht weniger um komplizierte Mathematik als um Zahlensicherheit und den Umgang mit fliegerischen Faustformeln.",
+    tips: ["Runde großzügig und rechne mit dem gerundeten Wert weiter – bei vier vorgegebenen Antworten reicht die Größenordnung meist aus.",
+      "Lerne die Faustformeln auswendig: 3:1-Regel für den Sinkflug, Sinkrate ≈ Grundgeschwindigkeit × 5, 1 NM = 1,852 km, 1 hPa ≈ 27 ft.",
+      "Rechne Geschwindigkeit sofort in NM pro Minute um (kt ÷ 60) – damit werden Zeitaufgaben zu einfachen Multiplikationen.",
+      "Nicht an einer Aufgabe festbeißen. Wer eine Aufgabe verliert, aber im Takt bleibt, kommt besser durch als umgekehrt."],
+    run: () => runQuiz({ count: 12, perQ: 45, next: () => mathQuestion() }) },
+
+  { id: "tech", name: "Technisches Verständnis", kind: "Physik & Technik", count: 12, perQ: 50,
+    icon: ic('<circle cx="10" cy="10" r="2.6"/><path d="M10 2.5v2.2M10 15.3v2.2M2.5 10h2.2M15.3 10h2.2M4.7 4.7l1.6 1.6M13.7 13.7l1.6 1.6M15.3 4.7l-1.6 1.6M6.3 13.7l-1.6 1.6"/>'),
+    desc: "Mechanik, Hydraulik, Elektrik, Strömungslehre und Flugzeugsysteme – klassische Aufgaben zum physikalischen Grundverständnis.",
+    what: "Geprüft wird technisch-physikalisches Grundverständnis auf Schulniveau: Hebel, Zahnräder, Druck, Stromkreise, Auftrieb und der grundsätzliche Aufbau von Flugzeugsystemen.",
+    tips: ["Schulphysik der Mittelstufe reicht aus – entscheidend ist, die Zusammenhänge zu verstehen statt Formeln auswendig zu können.",
+      "Achte auf die Richtung des Effekts: Wird etwas größer, kleiner oder bleibt es gleich? Diese Frage entscheidet viele Aufgaben allein.",
+      "Bei Hebel und Getriebe gilt immer: Was an Kraft gewonnen wird, geht an Weg oder Drehzahl verloren.",
+      "Lies die Aufgaben genau. Häufig unterscheiden sich die Antworten nur in einem Wort („nur“, „ausschließlich“, „immer“)."],
+    run: () => { const used = new Set(); return runQuiz({ count: 12, perQ: 50, next: i => techQuestion(i, used) }); } },
+
+  { id: "english", name: "Englisch", kind: "Sprachkompetenz ICAO", count: 12, perQ: 55,
+    icon: ic('<path d="M10 3v14M3 5.5h14M4.5 3h11a1 1 0 011 1v12a1 1 0 01-1 1h-11a1 1 0 01-1-1V4a1 1 0 011-1z"/>'),
+    desc: "Wortschatz, Grammatik, Leseverständnis und Standard-Sprechgruppen – auf dem Niveau, das im Auswahlverfahren erwartet wird.",
+    what: "Geprüft wird Englisch auf sicherem Niveau: allgemeiner und fliegerischer Wortschatz, Grammatik sowie das Verständnis von Texten und Funksprechgruppen.",
+    tips: ["Fliegerischen Wortschatz gezielt aufbauen: Wetter, Technik, Verfahren, Zwischenfallberichte.",
+      "Bei Grammatikaufgaben zuerst die Zeitform bestimmen, dann die Antwort auswählen – die Ablenker unterscheiden sich meist nur in der Zeitform.",
+      "Beim Leseverständnis erst die Frage lesen, dann den Text gezielt danach absuchen.",
+      "Standardphraseologie einprägen: der Unterschied zwischen roger, wilco, affirm und standby wird gerne abgefragt."],
+    run: () => { const used = new Set(); return runQuiz({ count: 12, perQ: 55, next: i => engQuestion(i, used) }); } },
+
+  { id: "memory", name: "Merkfähigkeit", kind: "Kurzzeitgedächtnis", count: 8, perQ: 18,
+    icon: ic('<path d="M4 4h12v12H4zM4 8h12M8 8v8M4 12h12"/>'),
+    desc: "Einen Abflugplan mit Flugnummern, Zielen, Gates, Pisten, Flugflächen und Frequenzen einprägen und anschließend abfragen lassen.",
+    what: "Geprüft wird das Kurzzeitgedächtnis für strukturierte Daten – genau die Art von Information, die im Cockpit aus Freigaben und Unterlagen aufgenommen werden muss.",
+    tips: ["Lerne spaltenweise, nicht zeilenweise – Muster innerhalb einer Spalte sind leichter zu behalten.",
+      "Verknüpfe Zahlen mit Bildern oder Geschichten. Frequenzen lassen sich gut als Uhrzeiten oder Jahreszahlen merken.",
+      "Präge dir zuerst die Auffälligkeiten ein: die einzige Piste 34, die höchste Flugfläche, das doppelte Gate.",
+      "Am Ende der Lernzeit den Plan im Kopf einmal komplett durchgehen, statt bis zur letzten Sekunde neue Details aufzunehmen."],
+    run: runMemory },
+
+  { id: "spatial", name: "Räumliche Orientierung", kind: "Fluglagen erkennen", count: 12, perQ: 20,
+    icon: ic('<circle cx="10" cy="10" r="7"/><path d="M3.6 12.2c3.5-1.6 9.3-1.6 12.8 0"/><path d="M6.5 10h7"/>'),
+    desc: "Aus dem künstlichen Horizont die Fluglage ableiten – und umgekehrt. Der Klassiker unter den fliegerischen Eignungstests.",
+    what: "Geprüft wird räumliches Vorstellungsvermögen: die Fähigkeit, eine Instrumentenanzeige in eine räumliche Lage zu übersetzen und dabei die Blickrichtung mitzudenken.",
+    tips: ["Merke dir eine Regel und wende sie stur an: Der Horizont dreht sich entgegen der Schräglage. Liegt der Boden rechts, ist das Flugzeug nach rechts geneigt.",
+      "Zweiter Schritt, immer getrennt vom ersten: Liegt der Horizont unter dem Flugzeugsymbol, zeigt die Nase nach oben.",
+      "Von hinten betrachtet stimmen links und rechts mit deiner eigenen Wahrnehmung überein – die Silhouette kippt in dieselbe Richtung wie das Flugzeug.",
+      "Erst die Schräglage bestimmen, dann die Längsneigung. Zwei einfache Entscheidungen sind schneller und sicherer als eine komplexe."],
+    run: () => runQuiz({ count: 12, perQ: 20, next: () => attitudeQuestion() }) },
+
+  { id: "instruments", name: "Instrumentenablesen", kind: "Anzeigen interpretieren", count: 10, perQ: 25,
+    icon: ic('<circle cx="10" cy="10" r="7"/><path d="M10 10l3.6-2.6M10 3v1.6M17 10h-1.6M10 17v-1.6M3 10h1.6"/>'),
+    desc: "Fahrtmesser, Höhenmesser, Kurskreisel, Variometer, Wendezeiger und der komplette Six-Pack-Scan.",
+    what: "Geprüft wird das schnelle, fehlerfreie Ablesen analoger Rundinstrumente und die Fähigkeit, mehrere Anzeigen zu einem Gesamtbild zusammenzusetzen.",
+    tips: ["Beim Höhenmesser zuerst den kurzen Zeiger (Tausender) lesen, dann den langen (Hunderter) – nie umgekehrt.",
+      "Der Kurskreisel ist in Zehnern beschriftet: die „12“ steht für 120°.",
+      "Beim Six-Pack immer in derselben Reihenfolge scannen. Ein fester Blickpfad verhindert, dass ein Instrument übersehen wird.",
+      "Variometer und Längsneigung müssen zusammenpassen – widersprechen sie sich, ist eine der beiden Anzeigen falsch abgelesen."],
+    run: () => runQuiz({ count: 10, perQ: 25, next: () => instrumentQuestion() }) },
+
+  { id: "concentration", name: "Konzentration", kind: "Daueraufmerksamkeit", count: 1, perQ: 70,
+    icon: ic('<path d="M2.5 10s3-5.5 7.5-5.5S17.5 10 17.5 10s-3 5.5-7.5 5.5S2.5 10 2.5 10z"/><circle cx="10" cy="10" r="2.2"/>'),
+    desc: "Zielzeichen in einem dichten Zeichenfeld unter Zeitdruck finden – ohne die falschen anzuklicken.",
+    what: "Geprüft werden Konzentrationsleistung und Sorgfalt über eine längere Belastungsdauer. Bewertet wird nicht nur die Menge, sondern vor allem die Fehlerquote.",
+    tips: ["Arbeite zeilenweise und halte das Tempo konstant – wer schneller wird, wird ungenau.",
+      "Fehlklicks zählen negativ. Lieber ein Zeichen weniger als ein falsches.",
+      "Prüfe immer beide Merkmale: erst der Buchstabe, dann die Anzahl der Striche. Beide müssen stimmen.",
+      "Nicht zurückspringen. Einmal geprüfte Zeichen werden nicht erneut kontrolliert."],
+    run: runConcentration },
+
+  { id: "trace", name: "Wegverfolgung", kind: "Visuelle Verfolgung", count: 8, perQ: 35,
+    icon: ic('<path d="M2.5 4.5c5 0 5 11 10 11M2.5 15.5c5 0 5-11 10-11M12.5 4.5h5M12.5 15.5h5"/>'),
+    desc: "Verschlungene Linien mit den Augen von links nach rechts verfolgen, ohne an Kreuzungen die Spur zu verlieren.",
+    what: "Geprüft wird die visuelle Verfolgungsleistung: eine Linie im Blick zu behalten, während viele ähnliche Linien sie kreuzen – die Grundlage jedes Instrumentenscans.",
+    tips: ["An Kreuzungen zählt die Richtung: Eine Linie ändert ihren Verlauf nie sprunghaft.",
+      "Verfolge in kurzen Sprüngen von Kreuzung zu Kreuzung statt in einer durchgehenden Bewegung.",
+      "Rückwärts von einem Ziel aus zu prüfen ist oft schneller, wenn du dich verloren hast.",
+      "Kopf ruhig halten und nur die Augen bewegen – so bleibt die Spur stabil."],
+    run: () => runQuiz({ count: 8, perQ: 35, next: () => traceQuestion() }) },
+
+  { id: "multitask", name: "Multitasking", kind: "Aufmerksamkeitsverteilung", count: 1, perQ: 95,
+    icon: ic('<path d="M3 3h6v6H3zM11 3h6v6h-6zM3 11h6v6H3zM11 11h6v6h-6z"/>'),
+    desc: "Drei Aufgaben gleichzeitig: einen driftenden Punkt auf Kurs halten, Systemwarnungen quittieren und nebenher rechnen.",
+    what: "Der anspruchsvollste Teil des Verfahrens. Geprüft wird die Fähigkeit, Aufmerksamkeit bewusst zu verteilen und unter Belastung zu priorisieren – nicht, alles perfekt zu machen.",
+    tips: ["Priorisiere wie im Cockpit: erst fliegen, dann navigieren, dann kommunizieren. Die Kurshaltung hat Vorrang.",
+      "Arbeite die Nebenaufgaben in kurzen Blicken ab und kehre sofort zur Kurshaltung zurück.",
+      "Gib eine Aufgabe bewusst auf, statt alle drei gleichzeitig zu verschlechtern – das ist die eigentlich geprüfte Kompetenz.",
+      "Bleib bei kleinen Steuerkorrekturen. Übersteuern kostet mehr Aufmerksamkeit als der ursprüngliche Fehler."],
+    run: runMultitask }
+];
+const modById = id => MODULES.find(m => m.id === id);
+
+/* ═══ Score helpers ═════════════════════════════════════════════════ */
+function gradeOf(s) {
+  if (s >= 85) return { cls: "g-ok", label: "Prüfungsreif", tone: "--ok", txt: "Auf diesem Niveau ist der Modulteil belastbar. Halte es mit kurzen, regelmäßigen Einheiten." };
+  if (s >= 70) return { cls: "g-ok", label: "Solide", tone: "--ok", txt: "Die Grundlagen sitzen. Für Prüfungssicherheit fehlt noch Tempo bei gleichbleibender Genauigkeit." };
+  if (s >= 55) return { cls: "g-cau", label: "Ausbaufähig", tone: "--caution", txt: "Das Verständnis ist da, die Ausführung noch zu langsam oder zu fehleranfällig. Sieh dir die Lösungswege unten genau an." };
+  return { cls: "g-warn", label: "Trainingsbedarf", tone: "--warn", txt: "Nimm dieses Modul zunächst auf Stufe „Aufbau“ und arbeite die Lösungswege nach, bevor du unter Zeitdruck übst." };
+}
+function ringSvg(score, size) {
+  const s = size || 96, r = s / 2 - 7, C = 2 * Math.PI * r;
+  const tone = score >= 70 ? "--ok" : score >= 55 ? "--caution" : "--warn";
+  return `<svg class="ring" viewBox="0 0 ${s} ${s}" width="${s}" height="${s}" role="img" aria-label="Ergebnis ${score} Prozent">
+    <circle cx="${s / 2}" cy="${s / 2}" r="${r}" fill="none" stroke="var(--panel-3)" stroke-width="6"/>
+    <circle cx="${s / 2}" cy="${s / 2}" r="${r}" fill="none" stroke="var(${tone})" stroke-width="6" stroke-linecap="round"
+      stroke-dasharray="${round(C * score / 100, 1)} ${round(C, 1)}" transform="rotate(-90 ${s / 2} ${s / 2})"/>
+    <text x="${s / 2}" y="${s / 2 + 1}" text-anchor="middle" dominant-baseline="middle"
+      font-family="IBM Plex Mono, monospace" font-size="${s * .27}" font-weight="500" fill="var(--ink)">${score}</text>
+    <text x="${s / 2}" y="${s / 2 + s * .21}" text-anchor="middle" font-family="Barlow Condensed, sans-serif"
+      font-size="${s * .11}" letter-spacing="1.4" fill="var(--ink-3)">PROZENT</text>
+  </svg>`;
+}
+function sparkline(vals, w, h) {
+  if (vals.length < 2) return "";
+  const W = w || 130, H = h || 26;
+  /* Range follows the data (padded, min 30 points) so small gains stay visible. */
+  const lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals);
+  const mid = (lo + hi) / 2, span = Math.max(30, hi - lo + 24);
+  const min = Math.max(0, Math.min(lo - 6, mid - span / 2)), max = Math.min(100, Math.max(hi + 6, mid + span / 2));
+  const pts = vals.map((v, i) => [i / (vals.length - 1) * (W - 4) + 2, H - 3 - (v - min) / (max - min) * (H - 6)]);
+  const d = pts.map((p, i) => (i ? "L" : "M") + round(p[0], 1) + " " + round(p[1], 1)).join(" ");
+  const last = pts[pts.length - 1];
+  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true">
+    <path d="${d} L ${round(last[0],1)} ${H} L 2 ${H} Z" fill="var(--data)" opacity=".10"/>
+    <path d="${d}" fill="none" stroke="var(--data)" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+    <circle cx="${round(last[0],1)}" cy="${round(last[1],1)}" r="2.4" fill="var(--data)"/></svg>`;
+}
+</script>
+<script>
+/* ═══ Home ══════════════════════════════════════════════════════════ */
+function renderHome() {
+  const v = view();
+  const runs = Store.data.runs;
+  const avg5 = runs.length ? Math.round(runs.slice(-5).reduce((s, r) => s + r.score, 0) / Math.min(5, runs.length)) : null;
+  const weakest = MODULES.map(m => ({ m, s: Store.avg(m.id) })).filter(x => x.s !== null).sort((a, b) => a.s - b.s)[0];
+
+  const hero = el("div", { class: "hero" });
+  const left = el("div");
+  left.appendChild(el("h1", { html: "Aufnahmetest<br><em>Cockpit-Nachwuchs</em>" }));
+  left.appendChild(el("p", { class: "sub", text: "Neun Trainingsmodule nach dem Muster der im deutschsprachigen Raum verbreiteten fliegerischen Eignungsverfahren – Kopfrechnen, technisches Verständnis, Englisch, Merkfähigkeit, räumliche Orientierung, Instrumentenablesen, Konzentration, Wegverfolgung und Multitasking. Alle Aufgaben werden bei jedem Durchgang neu erzeugt." }));
+  const cta = el("div", { class: "cta" });
+  cta.appendChild(el("button", { class: "btn pri", text: "Prüfungssimulation starten", onclick: () => go("exam") }));
+  cta.appendChild(el("button", { class: "btn", text: "Zufallsmodul", onclick: () => go("brief", pick(MODULES).id) }));
+  left.appendChild(cta);
+
+  const lvlBox = el("div", { style: "margin-top:26px" });
+  lvlBox.appendChild(el("div", { class: "lbl", text: "Schwierigkeitsstufe", style: "margin-bottom:8px" }));
+  const seg = el("div", { class: "seg" });
+  [1, 2, 3].forEach(n => {
+    seg.appendChild(el("button", { type: "button", text: LEVELS[n].name, "aria-pressed": String(lvl() === n),
+      onclick: () => { Store.set("level", n); go("home"); } }));
+  });
+  lvlBox.append(seg, el("p", { class: "note", text: LV().desc, style: "margin-top:8px;max-width:52ch" }));
+  left.appendChild(lvlBox);
+
+  const dash = el("div", { class: "card dash" });
+  dash.appendChild(el("h3", { text: "Trainingsstand" }));
+  const rows = [
+    ["Durchgänge gesamt", runs.length ? String(runs.length) : "—"],
+    ["Trainingszeit", runs.length ? fmtDur(Store.totalTime()) : "—"],
+    ["Ø letzte 5 Durchgänge", avg5 === null ? "—" : avg5 + " %"],
+    ["Module absolviert", MODULES.filter(m => Store.runsFor(m.id).length).length + " / " + MODULES.length]
+  ];
+  rows.forEach(([k, val]) => dash.appendChild(el("div", { class: "row" }, [el("span", { text: k }), el("b", { text: val })])));
+  if (weakest) {
+    const rec = el("div", { style: "margin-top:14px;padding-top:13px;border-top:1px solid var(--line)" });
+    rec.appendChild(el("div", { class: "lbl", text: "Empfehlung", style: "margin-bottom:6px" }));
+    rec.appendChild(el("p", { class: "note", html: `Schwächster Wert zuletzt: <b style="color:var(--ink)">${esc(weakest.m.name)}</b> mit ${weakest.s} %. Dort liegt aktuell der größte Zugewinn.` }));
+    rec.appendChild(el("button", { class: "btn sm", text: "Modul öffnen", style: "margin-top:10px", onclick: () => go("brief", weakest.m.id) }));
+    dash.appendChild(rec);
+  }
+  hero.append(left, dash);
+  v.appendChild(hero);
+
+  v.appendChild(el("div", { class: "sechead" }, [el("h2", { text: "Trainingsmodule" }), el("div", { class: "rule" })]));
+  const grid = el("div", { class: "grid" });
+  MODULES.forEach(m => {
+    const best = Store.best(m.id), last = Store.last(m.id), n = Store.runsFor(m.id).length;
+    const card = el("button", { class: "card mod", type: "button", onclick: () => go("brief", m.id) });
+    card.appendChild(el("div", { class: "mh" }, [
+      el("div", { class: "ico", html: m.icon }),
+      el("div", {}, [el("h3", { text: m.name }), el("div", { class: "kind", text: m.kind })])
+    ]));
+    card.appendChild(el("p", { text: m.desc }));
+    const foot = el("div", { class: "mf" });
+    foot.appendChild(el("span", { text: n ? n + " Durchgänge" : "noch nicht trainiert" }));
+    if (best !== null) {
+      foot.appendChild(el("div", { class: "bar" }, [el("i", { style: `width:${last}%;background:var(${last >= 70 ? "--ok" : last >= 55 ? "--caution" : "--warn"})` })]));
+      foot.appendChild(el("span", { class: "best", text: "Best " + best + "%" }));
+    }
+    card.appendChild(foot);
+    grid.appendChild(card);
+  });
+  v.appendChild(grid);
+  v.appendChild(el("div", { class: "disc", html: "<b>Hinweis</b>Dies ist ein unabhängiges, privates Übungswerkzeug. Es steht in keiner Verbindung zu Austrian Airlines oder einem anderen Luftfahrtunternehmen und bildet kein offizielles Testverfahren ab. Aufbau und Aufgabentypen orientieren sich an den öffentlich beschriebenen, im deutschsprachigen Raum üblichen fliegerischen Eignungsverfahren. Inhalt, Umfang und Ablauf des tatsächlichen Auswahlverfahrens können davon abweichen – verbindlich sind ausschließlich die Angaben des Unternehmens. Alle Ergebnisse werden nur lokal im Browser gespeichert." }));
+}
+
+/* ═══ Briefing ══════════════════════════════════════════════════════ */
+function renderBriefing(id) {
+  const m = modById(id); if (!m) return go("home");
+  const v = view();
+  const root = el("div", { class: "stage" });
+  const card = el("div", { class: "card briefing" });
+  card.appendChild(el("div", { class: "kind", text: m.kind }));
+  card.appendChild(el("h1", { text: m.name }));
+  card.appendChild(el("p", { text: m.what }));
+
+  const specs = el("div", { class: "specs" });
+  const fixedSecs = { concentration: { 1: 75, 2: 70, 3: 65 }, multitask: { 1: 70, 2: 95, 3: 120 } };
+  const s = [["Umfang", m.id === "concentration" ? "1 Zeichenfeld" : m.id === "multitask" ? "3 Kanäle" : m.count + " Aufgaben"],
+    ["Zeit", fixedSecs[m.id] ? fixedSecs[m.id][lvl()] + " s gesamt" : Math.round(m.perQ * LV().t) + " s je Aufgabe"],
+    ["Stufe", LV().name], ["Bestwert", Store.best(m.id) === null ? "—" : Store.best(m.id) + " %"]];
+  s.forEach(([k, val]) => specs.appendChild(el("div", {}, [el("u", { text: k }), el("b", { text: val })])));
+  card.appendChild(specs);
+
+  card.appendChild(el("div", { class: "lbl", text: "So gehst du vor", style: "margin-top:6px" }));
+  const ul = el("ul");
+  m.tips.forEach(t => ul.appendChild(el("li", { text: t })));
+  card.appendChild(ul);
+
+  const hist = Store.runsFor(m.id).slice(-12).map(r => r.score);
+  if (hist.length > 1) {
+    const sr = el("div", { class: "sparkrow" });
+    sr.append(el("div", { class: "lbl", text: "Verlauf" }), el("div", { html: sparkline(hist, 180, 30) }),
+      el("div", { class: "note", text: hist.length + " Durchgänge · zuletzt " + hist[hist.length - 1] + " %" }));
+    card.appendChild(sr);
+  }
+
+  const foot = el("div", { class: "qfoot", style: "margin-top:22px" });
+  foot.appendChild(el("button", { class: "btn pri", text: "Modul starten", onclick: () => startModule(m) }));
+  foot.appendChild(el("button", { class: "btn", text: "Zurück", onclick: () => go("home") }));
+  foot.appendChild(el("div", { class: "hintk", text: "Abbruch jederzeit mit Esc" }));
+  card.appendChild(foot);
+  root.appendChild(card);
+  v.appendChild(root);
+  document.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); startModule(m); } };
+}
+
+async function countdown(label) {
+  const v = view(); v.innerHTML = "";
+  const box = el("div", { class: "countdown" });
+  const n = el("div", { class: "n mono", text: "3" });
+  box.append(n, el("p", { text: label }));
+  v.appendChild(box);
+  for (const t of ["3", "2", "1", "LOS"]) { n.textContent = t; await wait(t === "LOS" ? 400 : 700); }
+}
+
+async function startModule(m, opts) {
+  State.mode = m.name.toUpperCase();
+  renderStrip();
+  document.onkeydown = null;
+  await countdown(m.name);
+  redrawFns = [];
+  const res = await m.run();
+  if (!res) return;
+  Store.addRun({ module: m.id, score: res.score, correct: res.correct, total: res.total, timeMs: res.timeMs, level: lvl() });
+  if (opts && opts.onDone) return opts.onDone(res);
+  renderResult(m, res);
+}
+
+/* ═══ Result ════════════════════════════════════════════════════════ */
+function renderResult(m, res) {
+  clearView();
+  State.mode = "AUSWERTUNG"; setStrip([]); renderStrip();
+  const g = gradeOf(res.score);
+  const v = view();
+  const root = el("div", { class: "stage" });
+  const card = el("div", { class: "card res" });
+  const verdict = el("div", { class: "verdict" });
+  verdict.appendChild(el("div", { html: ringSvg(res.score, 100) }));
+  const vt = el("div", { style: "flex:1;min-width:220px" });
+  vt.append(el("div", { class: "grade " + g.cls, text: g.label }), el("h1", { text: m.name }), el("p", { class: "vsub", text: g.txt }));
+  verdict.appendChild(vt);
+  card.appendChild(verdict);
+
+  const met = el("div", { class: "metrics" });
+  const prev = Store.runsFor(m.id).slice(0, -1);
+  const prevBest = prev.length ? Math.max.apply(null, prev.map(r => r.score)) : null;
+  const delta = prevBest === null ? null : res.score - prevBest;
+  [["Richtig", res.correct + " / " + res.total, "--ink"],
+   ["Dauer", fmtDur(res.timeMs), "--ink"],
+   ["Ø je Aufgabe", res.detail.length && res.detail[0].ms ? Math.round(res.detail.reduce((s, d) => s + (d.ms || 0), 0) / res.detail.length / 100) / 10 + " s" : "—", "--ink"],
+   ["ggü. Bestwert", delta === null ? "erster Lauf" : (delta > 0 ? "+" : "") + delta + " %", delta === null ? "--ink-3" : delta >= 0 ? "--ok" : "--warn"]
+  ].forEach(([k, val, tone]) => met.appendChild(el("div", {}, [el("u", { text: k }), el("b", { text: val, style: `color:var(${tone})` })])));
+  card.appendChild(met);
+
+  const wrong = res.detail.filter(d => !d.ok);
+  card.appendChild(el("div", { class: "lbl", text: wrong.length ? "Nachbereitung – " + wrong.length + " offene Punkte" : "Alle Aufgaben korrekt", style: "margin:4px 0 10px" }));
+  if (wrong.length) {
+    const rev = el("div", { class: "review" });
+    wrong.forEach(d => {
+      rev.appendChild(el("div", { class: "rw no" }, [
+        el("div", { class: "st", text: "×" }),
+        el("div", {}, [el("div", { class: "qq", text: d.q }),
+          el("div", { class: "aa", text: "Deine Antwort: " + d.your + "   ·   Richtig: " + d.right })])
+      ]));
+    });
+    card.appendChild(rev);
+  } else {
+    card.appendChild(el("p", { class: "note", text: "Fehlerfreier Durchgang. Bei stabil hohen Werten lohnt der Wechsel auf die nächste Schwierigkeitsstufe." }));
+  }
+
+  const hist = Store.runsFor(m.id).slice(-12).map(r => r.score);
+  if (hist.length > 1) {
+    const sr = el("div", { class: "sparkrow" });
+    sr.append(el("div", { class: "lbl", text: "Verlauf" }), el("div", { html: sparkline(hist, 180, 30) }),
+      el("div", { class: "note", text: "Bestwert " + Store.best(m.id) + " % · Ø letzte 5: " + Store.avg(m.id) + " %" }));
+    card.appendChild(sr);
+  }
+
+  const foot = el("div", { class: "qfoot", style: "margin-top:22px" });
+  foot.appendChild(el("button", { class: "btn pri", text: "Nochmal", onclick: () => startModule(m) }));
+  foot.appendChild(el("button", { class: "btn", text: "Andere Module", onclick: () => go("home") }));
+  foot.appendChild(el("button", { class: "btn", text: "Fortschritt", onclick: () => go("stats") }));
+  card.appendChild(foot);
+  root.appendChild(card);
+  v.appendChild(root);
+  document.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); startModule(m); } };
+}
+</script>
+<script>
+/* ═══ Prüfungssimulation ════════════════════════════════════════════ */
+const EXAM_SETS = {
+  short: { name: "Kurzsimulation", note: "Fünf Module, rund 12 Minuten – für den regelmäßigen Formcheck.",
+    steps: [{ id: "math", count: 8, perQ: 40 }, { id: "spatial", count: 8, perQ: 18 }, { id: "memory" },
+            { id: "english", count: 8, perQ: 50 }, { id: "concentration" }] },
+  full: { name: "Vollständige Simulation", note: "Alle neun Module in einem Durchgang, rund 25–30 Minuten – ohne Rückmeldung zwischendurch, wie im Ernstfall.",
+    steps: [{ id: "math", count: 10, perQ: 40 }, { id: "tech", count: 10, perQ: 45 }, { id: "spatial", count: 10, perQ: 18 },
+            { id: "memory" }, { id: "english", count: 10, perQ: 50 }, { id: "instruments", count: 8, perQ: 22 },
+            { id: "trace", count: 6, perQ: 30 }, { id: "concentration" }, { id: "multitask" }] }
+};
+function examRunner(step) {
+  if (step.id === "memory") return runMemory;
+  if (step.id === "concentration") return runConcentration;
+  if (step.id === "multitask") return runMultitask;
+  const base = { count: step.count, perQ: step.perQ, feedback: false };
+  if (step.id === "tech") { const used = new Set(); return () => runQuiz(Object.assign({}, base, { next: i => techQuestion(i, used) })); }
+  if (step.id === "english") { const used = new Set(); return () => runQuiz(Object.assign({}, base, { next: i => engQuestion(i, used) })); }
+  const gens = { math: mathQuestion, spatial: attitudeQuestion, instruments: instrumentQuestion, trace: traceQuestion };
+  return () => runQuiz(Object.assign({}, base, { next: () => gens[step.id]() }));
+}
+
+function renderExamIntro() {
+  const v = view();
+  const root = el("div", { class: "stage" });
+  const card = el("div", { class: "card briefing" });
+  card.appendChild(el("div", { class: "kind", text: "Zusammenhängender Durchgang" }));
+  card.appendChild(el("h1", { text: "Prüfungssimulation" }));
+  card.appendChild(el("p", { text: "Mehrere Module laufen ohne Unterbrechung hintereinander – ohne Lösungswege zwischendurch und ohne Pause zwischen den Aufgaben. Das trainiert genau das, was einzelne Module nicht abbilden: Konzentration über die gesamte Dauer und den Wechsel zwischen völlig verschiedenen Anforderungen." }));
+
+  const box = el("div", { style: "display:grid;gap:12px;margin-top:22px" });
+  Object.keys(EXAM_SETS).forEach(key => {
+    const set = EXAM_SETS[key];
+    const c = el("div", { class: "card", style: "padding:16px 18px" });
+    c.appendChild(el("h3", { text: set.name, style: "font-size:18px;text-transform:uppercase;letter-spacing:.08em" }));
+    c.appendChild(el("p", { class: "note", text: set.note, style: "margin-top:5px" }));
+    const list = el("div", { style: "margin:12px 0 0;display:flex;flex-wrap:wrap;gap:6px" });
+    set.steps.forEach((s, i) => list.appendChild(el("span", {
+      class: "note", style: "font-family:var(--f-mono);font-size:11.5px;padding:3px 8px;border:1px solid var(--line);border-radius:3px",
+      text: pad(i + 1) + " " + modById(s.id).name })));
+    c.appendChild(list);
+    c.appendChild(el("button", { class: "btn pri sm", text: set.name + " starten", style: "margin-top:14px", onclick: () => runExam(key) }));
+    box.appendChild(c);
+  });
+  card.appendChild(box);
+
+  const past = Store.runsFor("exam").slice(-8);
+  if (past.length) {
+    card.appendChild(el("div", { class: "lbl", text: "Bisherige Simulationen", style: "margin-top:24px" }));
+    const rev = el("div", { class: "review", style: "margin-top:10px" });
+    past.slice().reverse().forEach(r => {
+      rev.appendChild(el("div", { class: "rw " + (r.score >= 70 ? "ok" : "no") }, [
+        el("div", { class: "st", text: r.score >= 70 ? "✓" : "!" }),
+        el("div", { style: "flex:1" }, [
+          el("div", { class: "qq", text: (r.set === "full" ? "Vollständige Simulation" : "Kurzsimulation") + " · Stufe " + LEVELS[r.level || 2].name }),
+          el("div", { class: "aa", text: new Date(r.at).toLocaleDateString("de-AT", { day: "2-digit", month: "2-digit", year: "numeric" }) + " · " + fmtDur(r.timeMs) })]),
+        el("div", { class: "sc mono", style: `color:var(${r.score >= 70 ? "--ok" : r.score >= 55 ? "--caution" : "--warn"});font-size:17px;align-self:center`, text: r.score + "%" })
+      ]));
+    });
+    card.appendChild(rev);
+  }
+  card.appendChild(el("div", { class: "qfoot", style: "margin-top:22px" }, [el("button", { class: "btn", text: "Zurück", onclick: () => go("home") })]));
+  root.appendChild(card); v.appendChild(root);
+}
+
+async function runExam(key) {
+  const set = EXAM_SETS[key];
+  const results = [];
+  const t0 = performance.now();
+  for (let i = 0; i < set.steps.length; i++) {
+    const step = set.steps[i], m = modById(step.id);
+    await examBreak(set, i, results);
+    State.mode = "SIMULATION " + pad(i + 1) + "/" + pad(set.steps.length);
+    renderStrip();
+    await countdown(m.name);
+    redrawFns = [];
+    const res = await examRunner(step)();
+    if (!res) return;
+    results.push({ id: m.id, name: m.name, score: res.score, correct: res.correct, total: res.total, timeMs: res.timeMs, detail: res.detail });
+    Store.addRun({ module: m.id, score: res.score, correct: res.correct, total: res.total, timeMs: res.timeMs, level: lvl(), exam: true });
+  }
+  const overall = Math.round(results.reduce((s, r) => s + r.score, 0) / results.length);
+  const timeMs = performance.now() - t0;
+  Store.addRun({ module: "exam", set: key, score: overall, correct: 0, total: results.length, timeMs, level: lvl() });
+  renderExamReport(set, results, overall, timeMs);
+}
+
+function examBreak(set, ix, results) {
+  return new Promise(resolve => {
+    clearView();
+    const v = view();
+    const root = el("div", { class: "stage" });
+    const card = el("div", { class: "card briefing" });
+    card.appendChild(el("div", { class: "kind", text: set.name }));
+    card.appendChild(el("h1", { text: ix === 0 ? "Bereit?" : "Modul abgeschlossen" }));
+    card.appendChild(el("p", { text: ix === 0
+      ? "Sorge für eine ruhige Umgebung und lege Papier und Taschenrechner weg. Die Simulation läuft ohne Lösungswege durch; die vollständige Auswertung folgt am Ende."
+      : "Weiter geht es ohne Pause – die Zwischenergebnisse siehst du erst in der Gesamtauswertung." }));
+    const list = el("div", { style: "margin-top:20px" });
+    set.steps.forEach((s, i) => {
+      const m = modById(s.id);
+      list.appendChild(el("div", { class: "examline " + (i < ix ? "done" : i === ix ? "now" : "") }, [
+        el("div", { class: "ix", text: pad(i + 1) }),
+        el("div", { text: m.name }),
+        el("div", { class: "st", text: i < ix ? "erledigt" : i === ix ? "als Nächstes" : "offen" })
+      ]));
+    });
+    card.appendChild(list);
+    const foot = el("div", { class: "qfoot", style: "margin-top:22px" });
+    const b = el("button", { class: "btn pri", text: ix === 0 ? "Simulation starten" : "Nächstes Modul", onclick: () => { document.onkeydown = null; resolve(); } });
+    foot.append(b, el("button", { class: "btn", text: "Abbrechen", onclick: () => go("home") }), el("div", { class: "hintk", text: "Enter" }));
+    card.appendChild(foot);
+    root.appendChild(card); v.appendChild(root);
+    b.focus();
+    document.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); b.click(); } if (e.key === "Escape") go("home"); };
+  });
+}
+
+function renderExamReport(set, results, overall, timeMs) {
+  clearView();
+  State.mode = "AUSWERTUNG"; setStrip([]); renderStrip();
+  const g = gradeOf(overall);
+  const v = view();
+  const root = el("div", { class: "stage" });
+  const card = el("div", { class: "card res" });
+  const verdict = el("div", { class: "verdict" });
+  verdict.appendChild(el("div", { html: ringSvg(overall, 100) }));
+  verdict.appendChild(el("div", { style: "flex:1;min-width:220px" }, [
+    el("div", { class: "grade " + g.cls, text: g.label }),
+    el("h1", { text: set.name }),
+    el("p", { class: "vsub", text: g.txt })
+  ]));
+  card.appendChild(verdict);
+
+  const sorted = results.slice().sort((a, b) => a.score - b.score);
+  const met = el("div", { class: "metrics" });
+  [["Module", String(results.length), "--ink"], ["Gesamtdauer", fmtDur(timeMs), "--ink"],
+   ["Stärkster Bereich", sorted[sorted.length - 1].name, "--ok"], ["Schwächster Bereich", sorted[0].name, sorted[0].score >= 70 ? "--ink" : "--warn"]
+  ].forEach(([k, val, tone]) => met.appendChild(el("div", {}, [el("u", { text: k }), el("b", { text: val, style: `color:var(${tone});font-size:${val.length > 12 ? 14 : 20}px` })])));
+  card.appendChild(met);
+
+  card.appendChild(el("div", { class: "lbl", text: "Ergebnis je Modul", style: "margin:4px 0 10px" }));
+  const rev = el("div", { class: "review" });
+  results.forEach(r => {
+    const tone = r.score >= 70 ? "--ok" : r.score >= 55 ? "--caution" : "--warn";
+    rev.appendChild(el("div", { class: "strow" }, [
+      el("div", { class: "nm" }, [el("b", { text: r.name }), el("u", { text: r.correct + "/" + r.total + " richtig · " + fmtDur(r.timeMs) })]),
+      el("div", { class: "bar", style: "max-width:130px" }, [el("i", { style: `width:${r.score}%;background:var(${tone})` })]),
+      el("div", { class: "sc mono", style: `color:var(${tone})`, text: r.score + "%" })
+    ]));
+  });
+  card.appendChild(rev);
+
+  const weak = sorted.filter(r => r.score < 70).slice(0, 3);
+  if (weak.length) {
+    card.appendChild(el("div", { class: "expl", style: "margin-top:18px", html:
+      "<b>Nächste Schritte</b>Trainiere zuerst " + weak.map(w => "<b>" + esc(w.name) + "</b> (" + w.score + " %)").join(", ") +
+      " als Einzelmodul – dort bekommst du zu jeder Aufgabe den Lösungsweg. Wiederhole die Simulation erst danach." }));
+  } else {
+    card.appendChild(el("div", { class: "expl", style: "margin-top:18px", html:
+      "<b>Nächste Schritte</b>Alle Module liegen bei 70 % oder darüber. Wechsle auf die nächsthöhere Schwierigkeitsstufe, um Reserve aufzubauen." }));
+  }
+
+  const foot = el("div", { class: "qfoot", style: "margin-top:22px" });
+  foot.append(el("button", { class: "btn pri", text: "Simulation wiederholen", onclick: () => go("exam") }),
+    el("button", { class: "btn", text: "Einzelmodule", onclick: () => go("home") }),
+    el("button", { class: "btn", text: "Fortschritt", onclick: () => go("stats") }));
+  card.appendChild(foot);
+  root.appendChild(card); v.appendChild(root);
+}
+
+/* ═══ Fortschritt ═══════════════════════════════════════════════════ */
+function renderStats() {
+  const v = view();
+  const runs = Store.data.runs;
+  v.appendChild(el("div", { class: "sechead" }, [el("h2", { text: "Fortschritt" }), el("div", { class: "rule" })]));
+  if (!runs.length) {
+    v.appendChild(el("div", { class: "card empty" }, [
+      el("div", { class: "lbl", text: "Noch keine Daten" }),
+      el("p", { text: "Sobald du ein Modul abgeschlossen hast, erscheinen hier Bestwerte, Durchschnitte und der Verlauf über die letzten Durchgänge. Die Daten bleiben ausschließlich in diesem Browser." }),
+      el("button", { class: "btn sm", style: "margin-top:16px", text: "Zu den Modulen", onclick: () => go("home") })
+    ]));
+    return;
+  }
+  const met = el("div", { class: "metrics" });
+  const trained = MODULES.filter(m => Store.runsFor(m.id).length);
+  const overall = trained.length ? Math.round(trained.reduce((s, m) => s + Store.avg(m.id), 0) / trained.length) : 0;
+  [["Durchgänge", String(runs.length)], ["Trainingszeit", fmtDur(Store.totalTime())],
+   ["Ø über alle Module", overall + " %"], ["Simulationen", String(Store.runsFor("exam").length)]
+  ].forEach(([k, val]) => met.appendChild(el("div", {}, [el("u", { text: k }), el("b", { text: val })])));
+  v.appendChild(met);
+
+  const card = el("div", { class: "card", style: "margin-top:16px" });
+  card.appendChild(el("div", { class: "lbl", text: "Module", style: "padding:15px 16px 0" }));
+  const list = el("div", { style: "padding:8px 4px 6px" });
+  MODULES.slice().sort((a, b) => (Store.avg(a.id) === null ? 999 : Store.avg(a.id)) - (Store.avg(b.id) === null ? 999 : Store.avg(b.id))).forEach(m => {
+    const n = Store.runsFor(m.id).length, avg = Store.avg(m.id), best = Store.best(m.id);
+    const hist = Store.runsFor(m.id).slice(-12).map(r => r.score);
+    const tone = avg === null ? "--ink-3" : avg >= 70 ? "--ok" : avg >= 55 ? "--caution" : "--warn";
+    const row = el("div", { class: "strow" });
+    row.appendChild(el("div", { class: "nm" }, [el("b", { text: m.name }),
+      el("u", { text: n ? n + " Durchgänge · Bestwert " + best + " %" : "noch nicht trainiert" })]));
+    if (hist.length > 1) row.appendChild(el("div", { html: sparkline(hist, 120, 26) }));
+    row.appendChild(el("div", { class: "sc mono", style: `color:var(${tone})`, text: avg === null ? "—" : avg + "%" }));
+    row.appendChild(el("button", { class: "btn sm", text: "Üben", onclick: () => go("brief", m.id) }));
+    list.appendChild(row);
+  });
+  card.appendChild(list);
+  v.appendChild(card);
+  v.appendChild(el("p", { class: "note", style: "margin-top:14px", text: "Der Wert je Modul ist der Durchschnitt der letzten fünf Durchgänge. Alle Daten liegen ausschließlich lokal in diesem Browser." }));
+  const del = el("div", { style: "margin-top:14px;display:flex;align-items:center;gap:10px" });
+  const delBtn = el("button", { class: "btn sm danger", text: "Verlauf löschen" });
+  delBtn.addEventListener("click", () => {
+    if (delBtn.dataset.armed) { Store.reset(); go("stats"); return; }
+    delBtn.dataset.armed = "1";
+    delBtn.textContent = "Wirklich löschen?";
+    del.appendChild(el("button", { class: "btn sm", text: "Abbrechen", onclick: () => go("stats") }));
+  });
+  del.appendChild(delBtn);
+  v.appendChild(del);
+}
+
+/* ═══ Boot ══════════════════════════════════════════════════════════ */
+$("#themeBtn").addEventListener("click", () => { redrawFns.forEach(f => { try { f(); } catch (e) {} }); });
+go("home");
+</script>
