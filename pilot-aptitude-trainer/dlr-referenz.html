@@ -1,0 +1,343 @@
+<title>DLR-Test Referenz</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  color-scheme: light dark;
+  --bg:#E4E9E8; --panel:#FFFFFF; --panel-2:#F0F4F3; --panel-3:#E7ECEB;
+  --line:#C4CFCD; --line-soft:#DAE2E0;
+  --ink:#0D1719; --ink-2:#3A4B4D; --ink-3:#6A7A7C;
+  --ok:#0A7A46; --ok-bg:#0a7a4614;
+  --caution:#8F5E00; --caution-bg:#8f5e0014;
+  --warn:#AF1119; --warn-bg:#af111914;
+  --data:#0A6874; --data-bg:#0a687414;
+  --aua:#C8102E;
+  --f-display:'Barlow Condensed','Arial Narrow',system-ui,sans-serif;
+  --f-body:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --f-mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  --r:3px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#070B0D; --panel:#0E1417; --panel-2:#141B1F; --panel-3:#1A2328;
+  --line:#253137; --line-soft:#182126;
+  --ink:#E4EFEF; --ink-2:#A4B8BA; --ink-3:#6C8083;
+  --ok:#22DD84; --ok-bg:#22dd841c; --caution:#FFB020; --caution-bg:#ffb0201c;
+  --warn:#FF4D45; --warn-bg:#ff4d451c; --data:#4FD8E8; --data-bg:#4fd8e81c; --aua:#FF2E45;
+}}
+:root[data-theme="dark"]{
+  --bg:#070B0D; --panel:#0E1417; --panel-2:#141B1F; --panel-3:#1A2328;
+  --line:#253137; --line-soft:#182126;
+  --ink:#E4EFEF; --ink-2:#A4B8BA; --ink-3:#6C8083;
+  --ok:#22DD84; --ok-bg:#22dd841c; --caution:#FFB020; --caution-bg:#ffb0201c;
+  --warn:#FF4D45; --warn-bg:#ff4d451c; --data:#4FD8E8; --data-bg:#4fd8e81c; --aua:#FF2E45;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15.5px;line-height:1.6;-webkit-font-smoothing:antialiased}
+.wrap{max-width:940px;margin:0 auto;padding:0 22px}
+h1,h2,h3,h4{margin:0;font-family:var(--f-display);font-weight:600;text-wrap:balance;line-height:1.12}
+p{margin:0}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.lbl{font-family:var(--f-display);font-weight:600;text-transform:uppercase;letter-spacing:.13em;font-size:12px;color:var(--ink-3);line-height:1}
+
+header{border-bottom:1px solid var(--line);background:var(--panel)}
+.hd{padding:38px 0 30px}
+.flag{width:14px;height:24px;display:inline-flex;flex-direction:column;border:1px solid var(--line);vertical-align:-5px;margin-right:9px}
+.flag i{flex:1;background:var(--aua)}
+.flag i:nth-child(2){background:var(--panel)}
+h1{font-size:clamp(30px,5vw,46px);font-weight:700;text-transform:uppercase;letter-spacing:-.004em}
+.sub{color:var(--ink-2);margin-top:12px;max-width:66ch}
+.meta{display:flex;gap:0;flex-wrap:wrap;margin-top:22px;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.meta div{padding:9px 15px;border-right:1px solid var(--line);font-family:var(--f-mono);font-size:12.5px;color:var(--ink-2)}
+.meta div:last-child{border-right:0}
+.meta b{color:var(--data);font-weight:500}
+
+main{padding:34px 0 80px}
+section{margin-bottom:44px}
+.sechead{display:flex;align-items:baseline;gap:14px;margin-bottom:18px}
+.sechead .n{font-family:var(--f-mono);font-size:13px;color:var(--aua);flex-shrink:0}
+.sechead h2{font-size:23px;text-transform:uppercase;letter-spacing:.09em}
+.sechead .rule{flex:1;height:1px;background:var(--line)}
+h3{font-size:18px;text-transform:uppercase;letter-spacing:.07em;margin:26px 0 10px}
+p+p{margin-top:11px}
+.lead{color:var(--ink-2)}
+
+/* Belegstufe */
+.ev{display:inline-block;font-family:var(--f-display);font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;padding:2px 7px;border:1px solid currentColor;border-radius:2px;vertical-align:2px;white-space:nowrap}
+.ev-a{color:var(--ok)} .ev-b{color:var(--caution)} .ev-c{color:var(--ink-3)}
+.evkey{display:grid;gap:8px;padding:15px 17px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r)}
+.evkey div{display:flex;gap:11px;align-items:baseline;font-size:14px;color:var(--ink-2)}
+.evkey .ev{flex-shrink:0;min-width:106px;text-align:center}
+
+/* Stufen */
+.stages{display:grid;gap:11px}
+.stage{display:grid;grid-template-columns:auto 1fr;gap:15px;padding:15px 17px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r)}
+.stage .num{font-family:var(--f-mono);font-size:12px;color:var(--data);padding-top:3px}
+.stage h4{font-size:17px;text-transform:uppercase;letter-spacing:.06em}
+.stage p{color:var(--ink-2);font-size:14.5px;margin-top:5px}
+.stage .where{font-family:var(--f-mono);font-size:12px;color:var(--ink-3);margin-top:7px}
+
+/* Tabellen */
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--panel)}
+table{border-collapse:collapse;width:100%;font-size:14.5px;min-width:520px}
+th{font-family:var(--f-display);font-size:11.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3);text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);font-weight:600;white-space:nowrap}
+td{padding:11px 14px;border-bottom:1px solid var(--line-soft);vertical-align:top}
+tr:last-child td{border-bottom:0}
+td.k{font-family:var(--f-mono);font-size:13px;color:var(--data);white-space:nowrap}
+td.g{color:var(--ok);font-weight:500;white-space:nowrap}
+td.y{color:var(--caution);font-weight:500;white-space:nowrap}
+td.r{color:var(--warn);font-weight:500;white-space:nowrap}
+tbody tr:hover{background:var(--panel-2)}
+
+.callout{padding:15px 17px;border:1px solid var(--line);border-left:2px solid var(--data);border-radius:0 var(--r) var(--r) 0;background:var(--panel);font-size:14.5px;color:var(--ink-2);margin:18px 0}
+.callout b.t{display:block;font-family:var(--f-display);text-transform:uppercase;letter-spacing:.13em;font-size:11px;color:var(--data);margin-bottom:5px}
+.callout.warn{border-left-color:var(--caution)}
+.callout.warn b.t{color:var(--caution)}
+.callout.crit{border-left-color:var(--warn)}
+.callout.crit b.t{color:var(--warn)}
+
+ul{margin:10px 0 0;padding-left:19px;color:var(--ink-2)}
+li{margin:6px 0}
+li b{color:var(--ink)}
+a{color:var(--data)}
+.src{font-size:13px;color:var(--ink-3);line-height:1.7}
+.src a{word-break:break-word}
+footer{border-top:1px solid var(--line);padding:22px 0 40px;font-size:12.5px;color:var(--ink-3);line-height:1.7}
+@media (max-width:600px){
+  .stage{grid-template-columns:1fr;gap:6px}
+  .evkey .ev{min-width:0}
+}
+</style>
+
+<header><div class="wrap hd">
+  <div class="lbl" style="margin-bottom:12px">Recherchestand 4. September 2026</div>
+  <h1><span class="flag" aria-hidden="true"><i></i><i></i><i></i></span>DLR-Test: Aufgaben und Kriterien</h1>
+  <p class="sub">Was im Auswahlverfahren für das Cockpit tatsächlich verlangt wird, wie bewertet wird und welche Mindestnoten für die Zulassung nötig sind – mit ausgewiesener Belegstufe für jede Angabe.</p>
+  <div class="meta">
+    <div>Stufe 1 <b>DLR-Zertifikat Cockpit</b></div>
+    <div>Kosten 2026 <b>417,69 € zzgl. USt.</b></div>
+    <div>Gültigkeit <b>i. d. R. 2 Jahre</b></div>
+    <div>Orte <b>Hamburg · Zürich · Mailand</b></div>
+  </div>
+</div></header>
+
+<main class="wrap">
+
+<section>
+  <div class="sechead"><span class="n">00</span><h2>Belegstufen</h2><div class="rule"></div></div>
+  <p class="lead">Die tatsächlichen Testinhalte des DLR sind vertraulich. Ich habe deshalb jede Angabe unten danach markiert, worauf sie sich stützt. Für eine echte Prüfungsvorbereitung ist dieser Unterschied wichtiger als jedes Detail.</p>
+  <div class="evkey" style="margin-top:16px">
+    <div><span class="ev ev-a">Belegt</span><span>Aus Veröffentlichungen des DLR selbst oder der European Flight Academy – Ablauf, Bewertungsraster, Zulassungsgrenzen, Kosten.</span></div>
+    <div><span class="ev ev-b">Rekonstruiert</span><span>Aus Vorbereitungsanbietern (SkyTest, vimana, dlr-test.training, testhelden). Deren Modulkataloge sind Nachbauten, keine Originale. Aufgabentyp meist zutreffend, Zahlenangaben zu Umfang und Zeit nicht verlässlich.</span></div>
+    <div><span class="ev ev-c">Berichtet</span><span>Aus Teilnehmerberichten und Foren. Nützlich für die Atmosphäre, aber einzelne Erfahrungen, teils veraltet.</span></div>
+  </div>
+  <div class="callout warn"><b class="t">Einschränkung dieser Recherche</b>Die Netzwerkregeln dieser Umgebung haben den direkten Abruf von dlr.de, european-flight-academy.com, Wikipedia und allen Anbieterseiten blockiert. Alle Angaben stammen aus den Zusammenfassungen der Websuche, nicht aus von mir selbst geöffneten Seiten. Prüfe die als <span class="ev ev-a">Belegt</span> markierten Punkte vor der Anmeldung an den verlinkten Originalquellen nach – vor allem Kosten, Gültigkeit und Mindestnoten.</div>
+</section>
+
+<section>
+  <div class="sechead"><span class="n">01</span><h2>Der Weg bei Austrian</h2><div class="rule"></div></div>
+  <p class="lead">Das Verfahren ist nicht mehr das klassische „BU dann FQ auf Einladung“. Heute buchst du den Test selbst beim DLR, erhältst ein Zertifikat und bewirbst dich damit. <span class="ev ev-a">Belegt</span></p>
+  <div class="stages" style="margin-top:18px">
+    <div class="stage"><div class="num">01</div><div>
+      <h4>DLR-Zertifikat Cockpit</h4>
+      <p>Ein Testtag, <b>ausschließlich computerbasiert</b>. Kein Papier, keine Gruppenübung, kein Interview an diesem Tag. Termin buchst du selbst beim DLR, unabhängig von einer Bewerbung.</p>
+      <div class="where">Hamburg · Zürich · Mailand — auf Deutsch oder Englisch</div></div></div>
+    <div class="stage"><div class="num">02</div><div>
+      <h4>LHG Assessment</h4>
+      <p>Ein Tag beim Lufthansa-Group-Assessment: psychomotorische Prüfungen, Interviews und Gruppenaufgaben zusammen.</p>
+      <div class="where">Interpersonal Hamburg oder SWISS Flight Crew Assessment Center Zürich</div></div></div>
+    <div class="stage"><div class="num">03</div><div>
+      <h4>PIT-Simulatorscreening <span class="ev ev-b" style="margin-left:4px">Rekonstruiert</span></h4>
+      <p>Optionale Stufe des Austrian Future Pilots Program: Koordination, Präzision und Mehrfachbelastung im Simulator.</p>
+      <div class="where">Wien</div></div></div>
+    <div class="stage"><div class="num">04</div><div>
+      <h4>Endauswahl <span class="ev ev-b" style="margin-left:4px">Rekonstruiert</span></h4>
+      <p>Optionale Schlussstufe: verkürzte DLR-FQ mit Gruppenübung, DCT und Interview.</p>
+      <div class="where">Wien</div></div></div>
+  </div>
+  <div class="callout crit"><b class="t">Ein Versuch</b>Bei Austrian gilt eine <b>One-Shot-Policy</b>: Wer im Verfahren endgültig scheitert, kann sich für dasselbe Programm nicht erneut bewerben. <span class="ev ev-b">Rekonstruiert</span> — kläre das vor der Anmeldung direkt mit Austrian, es ist die folgenschwerste Einzelangabe in dieser Übersicht.<br><br>Das Zertifikat selbst darfst du dagegen wiederholen; das DLR wendet bei Mehrfachteilnahme statistische Korrekturverfahren an und du entscheidest, welches Zertifikat du einreichst. Als Wartezeit werden rund <b>sechs Monate</b> empfohlen, weil sich Leistung bei kurzfristiger Wiederholung erfahrungsgemäß nicht verbessert. <span class="ev ev-a">Belegt</span></div>
+  <p class="lead" style="margin-top:16px">Rund <b>75 bis 80 % fallen durch</b> – die Bestehensquote liegt bei etwa einem Fünftel. <span class="ev ev-c">Berichtet</span> Das gesamte Austrian-Verfahren wird auf Deutsch geführt; gute Deutsch- <em>und</em> Englischkenntnisse in Wort und Schrift sind Voraussetzung.</p>
+</section>
+
+<section>
+  <div class="sechead"><span class="n">02</span><h2>Wie bewertet wird</h2><div class="rule"></div></div>
+  <p class="lead">Du bekommst keine Punktzahl, sondern eine <b>Note je Kompetenzbereich</b>. Genau daran hängt die Zulassung. <span class="ev ev-a">Belegt</span></p>
+  <h3>Notenskala</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Note</th><th>Bedeutung</th></tr></thead>
+    <tbody>
+      <tr><td class="k g">A</td><td>Above Standard — über dem Anforderungsniveau</td></tr>
+      <tr><td class="k g">B</td><td>Standard — auf dem Anforderungsniveau</td></tr>
+      <tr><td class="k y">C</td><td>Marginal — grenzwertig</td></tr>
+      <tr><td class="k r">D</td><td>Below Standard — unter dem Anforderungsniveau</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Mindestnoten für die Zulassung zur European Flight Academy</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Kompetenzbereich</th><th>Nötig</th><th>Anmerkung</th></tr></thead>
+    <tbody>
+      <tr><td>Basic Cognitive Abilities</td><td class="g">A oder B</td><td>Kein Spielraum. Hier entscheidet sich das Verfahren.</td></tr>
+      <tr><td>Operational and Professional Competencies</td><td class="g">A oder B</td><td>Kein Spielraum.</td></tr>
+      <tr><td>English Language Proficiency</td><td class="y">A, B oder C</td><td>Bei C oder D ist ein <b>Nachweis über B2</b> beizubringen.</td></tr>
+      <tr><td>Psychomotor Abilities</td><td class="y">A, B oder C</td><td></td></tr>
+      <tr><td>Personality Traits</td><td class="y">A, B oder C</td><td></td></tr>
+      <tr><td>Social Competencies</td><td class="y">A, B oder C</td><td></td></tr>
+    </tbody>
+  </table></div>
+  <div class="callout"><b class="t">Was das für dein Training heißt</b>Die beiden harten Bereiche sind <b>Basic Cognitive Abilities</b> und <b>Operational and Professional Competencies</b> – dort reicht „grenzwertig“ nicht. Genau darauf zahlen Kopfrechnen, Merkfähigkeit, Orientierung, Aufmerksamkeit und Logik ein. Psychomotorik darf dagegen ein C sein: Wer am Joystick schwächer ist, scheitert nicht zwingend daran.</div>
+  <p class="lead" style="margin-top:16px"><b>Tempo und Genauigkeit zählen beide.</b> Die Untertests haben durchweg enge Zeitfenster; wer nur schnell oder nur genau ist, verliert. Konkrete Punkteschlüssel („55 Punkte Genauigkeit, 20 Punkte Tempo“) kursieren im Netz, stammen aber aus der internen Wertung eines Übungsanbieters und <b>nicht</b> vom DLR. Verlass dich nicht darauf. <span class="ev ev-b">Rekonstruiert</span></p>
+</section>
+
+<section>
+  <div class="sechead"><span class="n">03</span><h2>Die Untertests</h2><div class="rule"></div></div>
+  <p class="lead">Die folgende Gliederung folgt dem Modulkatalog der verbreiteten Vorbereitungssoftware und deckt sich mit den Bereichen, die DLR und EFA benennen. Die Kürzel sind die dort gebräuchlichen. <span class="ev ev-b">Rekonstruiert</span></p>
+
+  <h3>Mathematik</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Kürzel</th><th>Test</th><th>Was verlangt wird</th></tr></thead>
+    <tbody>
+      <tr><td class="k">KRN</td><td>Kopfrechnen</td><td><b>Wird in der BU ausschließlich akustisch gestellt</b> – die Aufgaben kommen über Kopfhörer, du siehst sie nicht. Entsprechend einfacher gerechnet als in visuellen Übungsversionen, aber du musst Aufgabe und Zwischenergebnis gleichzeitig im Kopf halten. Nur in der GU (für Ready Entry) teils akustisch, teils visuell.</td></tr>
+      <tr><td class="k">EST</td><td>Schätzaufgaben</td><td>Nicht exakt rechnen, sondern die richtige Antwortoption <b>überschlagen</b>. Wer ausrechnet, verliert.</td></tr>
+      <tr><td class="k">RAG</td><td>Textaufgaben</td><td>Eingekleidete Rechenaufgaben – Dreisatz, Prozente, Verhältnisse.</td></tr>
+      <tr><td class="k">NUS</td><td>Zahlenreihen</td><td>Bildungsgesetz erkennen und fortsetzen.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Logik</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Kürzel</th><th>Test</th><th>Was verlangt wird</th></tr></thead>
+    <tbody>
+      <tr><td class="k">MAT</td><td>Matrizentest</td><td>Figurenmatrix ergänzen: mehrere Merkmale folgen je eigenen Regeln.</td></tr>
+      <tr><td class="k">SAD</td><td>Symboladdition</td><td>Zahlen sind durch Symbole verschlüsselt – erst entschlüsseln, dann addieren.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Merkfähigkeit</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Kürzel</th><th>Test</th><th>Was verlangt wird</th></tr></thead>
+    <tbody>
+      <tr><td class="k">RMS</td><td>Running Memory Span</td><td>Ziffern werden gleichmäßig vorgelesen. Die Folge <b>endet ohne Ankündigung</b>; danach die zuletzt gehörten Ziffern <b>rückwärts</b> eingeben. Schwierigkeit über Folgenlänge (3–15) und Sprechtempo (1 s bis 500 ms).</td></tr>
+      <tr><td class="k">VMC</td><td>Visuelles Gedächtnis</td><td>Ein <b>n-back-Test</b>: Symbole erscheinen nacheinander, du vergleichst jedes mit dem <b>n Schritte zuvor</b> (2-back bis 5-back, vor jedem Durchgang neu angesagt) und antwortest „gleich“ / „ungleich“.</td></tr>
+      <tr><td class="k">AKM</td><td>Akustischer Merkfähigkeitstest</td><td>Merkaufgabe über Kopfhörer.</td></tr>
+      <tr><td class="k">BGT</td><td>Buchstaben-Gedächtnis</td><td>Buchstabenfolgen behalten und abrufen.</td></tr>
+      <tr><td class="k">VIM/MEK</td><td>Visueller Merkfähigkeitstest</td><td>Visuelle Inhalte einprägen und wiedererkennen.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Orientierung</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Kürzel</th><th>Test</th><th>Was verlangt wird</th></tr></thead>
+    <tbody>
+      <tr><td class="k">PPT</td><td>Würfelklappen</td><td>Würfelnetz gedanklich falten. Je Aufgabe eine Abwicklung und <b>fünf</b> Antwortwürfel.</td></tr>
+      <tr><td class="k">ROT</td><td>Würfelrotationstest</td><td>Gedrehte Würfel vergleichen – <b>Rotation</b>, nicht Faltung.</td></tr>
+      <tr><td class="k">SFT</td><td>Schlauchfigurentest</td><td>Räumlicher Klassiker: Verlauf eines Schlauchs durch einen Körper nachvollziehen.</td></tr>
+      <tr><td class="k">VLR</td><td>Kurvenzählen</td><td>Weg mit Richtungswechseln: Links- bzw. Rechtskurven <b>aus Sicht des Fahrenden</b> zählen. Anderswo als Wegfigurentest (WFG) bezeichnet.</td></tr>
+      <tr><td class="k">RMZ</td><td>Rotierendes Labyrinth</td><td>Orientierung in einem Labyrinth, das sich mitdreht.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Aufmerksamkeit</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Kürzel</th><th>Test</th><th>Was verlangt wird</th></tr></thead>
+    <tbody>
+      <tr><td class="k">OWT</td><td>Optischer Wahrnehmungstest</td><td>Eine Tafel mit Uhren erscheint <b>kurz</b>. Nur die vier Uhren merken, die einer Regel entsprechen (rund/eckig, schwarz/weiß), und ihre Zeiten <b>in Lesereihenfolge</b> eingeben.</td></tr>
+      <tr><td class="k">SKT</td><td>Dreieckstest</td><td>Fortlaufend erscheinende Dreiecke mit drei Merkmalen (Farbe, Ausrichtung, Punkte). Vor jedem Durchgang <b>zwei Regeln</b> merken, dann jedes Dreieck mit dem vorherigen vergleichen; drei Schaltflächen. Gefragt ist nicht Denkleistung, sondern gleichmäßige Konzentration über eine monotone Strecke.</td></tr>
+      <tr><td class="k">SVT</td><td>Signalverarbeitungstest</td><td>Schnelle motorische Reaktion auf visuelle Signale nach vorgegebenen Regeln.</td></tr>
+      <tr><td class="k">VFF</td><td>Gestalterkennungstest</td><td>Formen unter Zeitdruck wiedererkennen.</td></tr>
+      <tr><td class="k">ABQ</td><td>Bourdon-Test</td><td>Klassischer Durchstreichtest zur Daueraufmerksamkeit.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Psychomotorik und Mehrfachbelastung</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Kürzel</th><th>Test</th><th>Was verlangt wird</th></tr></thead>
+    <tbody>
+      <tr><td class="k">MIC</td><td>Monitoring und Instrumentekoordination</td><td>Der Kern des Verfahrens. Eine vereinfachte Flugaufgabe an mehreren Instrumenten: <b>Kurs, Höhe und Geschwindigkeit halten</b>, gesteuert mit <b>Joystick und Touchscreen</b>, während parallel eine <b>akustische Aufgabe über Kopfhörer</b> läuft. Bewertet wird, ob du Abweichungen und Nebenaufgaben zuverlässig erkennst, <em>ohne</em> die Hauptaufgabe zu verlieren.</td></tr>
+      <tr><td class="k">TOM</td><td>Test für operative Mehrfacharbeit</td><td>Mehrere Aufgabenströme gleichzeitig bedienen.</td></tr>
+      <tr><td class="k">MMT</td><td>Multi-Monitoring-Test</td><td>Mehrere Anzeigen parallel überwachen.</td></tr>
+      <tr><td class="k">PMA</td><td>PMA-Test</td><td>Psychomotorische Grundfertigkeit.</td></tr>
+    </tbody>
+  </table></div>
+  <p class="lead" style="margin-top:12px">Die Hardware ist Teil der Aufgabe: Getestet wird an Rechnern mit <b>Touchscreen, Joystick, Headset und Spezialtastatur</b>. Wer nur mit Maus und Tastatur geübt hat, trifft am Testtag auf eine ungewohnte Bedienung.</p>
+
+  <h3>Wissen</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Kürzel</th><th>Test</th><th>Was verlangt wird</th></tr></thead>
+    <tbody>
+      <tr><td class="k">TVT</td><td>Technisches Verständnis</td><td>Mechanik, Elektrizitätslehre, Wärmelehre, Optik, Wellenlehre und technisches Allgemeinwissen. Typisch: Hebelwirkung, Kräfte, Gleichgewicht, Bewegung; in der Optik Brennweite, Bildentstehung, Lichtbrechung. Schulniveau Mittelstufe, aber unter Zeitdruck.</td></tr>
+      <tr><td class="k">ENS</td><td>Englisch</td><td>Grammatik, Vokabular und <b>Hörverstehen</b> auf <b>B2 bis C1</b>. Abgefragt werden auch Redewendungen und Synonyme.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <div class="sechead"><span class="n">04</span><h2>Abgleich mit dem Trainer</h2><div class="rule"></div></div>
+  <p class="lead">Diese Recherche stützt sich auf deutlich mehr Quellen als die erste. Drei Aussagen von damals waren falsch – sie stehen unten in der Tabelle und sind hier zuerst genannt, weil sie dein Training betreffen.</p>
+  <div class="callout crit"><b class="t">Korrekturen zu meiner früheren Aussage</b>
+    <b>1.</b> Ich hatte gesagt, Logik sei kein DLR-Untertest. Falsch – <b>MAT</b> (Matrizentest) und <b>SAD</b> (Symboladdition) gehören dazu.<br>
+    <b>2.</b> Ich hatte das Modul „Merkfähigkeit“ (Flugplan einprägen) als VMC ausgewiesen. Falsch – <b>VMC ist ein n-back-Test</b> mit ganz anderer Mechanik.<br>
+    <b>3.</b> Ich hatte „Räumliche Orientierung“ (künstlicher Horizont) als ROT ausgewiesen. Falsch – <b>ROT ist ein Würfelrotationstest</b>. Der Fluglagen-Test taucht in keinem Katalog auf.<br><br>
+    Außerdem hatte ich behauptet, der Trainer decke alle dokumentierten Untertests ab. Das stimmt nicht: Es fehlen rund zehn.</div>
+  <div class="tw" style="margin-top:18px"><table>
+    <thead><tr><th>Untertest</th><th>Im Trainer</th><th>Bewertung</th></tr></thead>
+    <tbody>
+      <tr><td class="k">RMS</td><td class="g">Akustisches Gedächtnis</td><td>Trifft zu.</td></tr>
+      <tr><td class="k">OWT</td><td class="g">Optische Wahrnehmung</td><td>Trifft zu.</td></tr>
+      <tr><td class="k">SKT</td><td class="g">Dreieckstest</td><td>Trifft zu.</td></tr>
+      <tr><td class="k">PPT</td><td class="y">Würfelklappen</td><td>Mechanik stimmt, aber <b>vier statt fünf</b> Antwortoptionen.</td></tr>
+      <tr><td class="k">VLR / WFG</td><td class="g">Wegfiguren</td><td>Trifft zu.</td></tr>
+      <tr><td class="k">MAT</td><td class="g">Logisches Denken</td><td>Figurenmatrix trifft zu; Zahlen- und Buchstabenreihen decken NUS mit ab.</td></tr>
+      <tr><td class="k">TVT</td><td class="g">Technisches Verständnis</td><td>Themen passen. Wellenlehre und Optik fehlen im Fragenpool.</td></tr>
+      <tr><td class="k">ENS</td><td class="y">Englisch</td><td>Niveau passt, aber <b>ohne Hörverstehen</b> – das ist Teil des echten Tests.</td></tr>
+      <tr><td class="k">KRN</td><td class="r">Kopfrechnen</td><td><b>Falsche Darbietung.</b> Im Trainer visuell, in der BU ausschließlich akustisch.</td></tr>
+      <tr><td class="k">VMC</td><td class="r">Merkfähigkeit</td><td><b>Falscher Aufgabentyp.</b> Flugplan-Tabelle statt n-back.</td></tr>
+      <tr><td class="k">MIC</td><td class="y">Multitasking</td><td>Aufmerksamkeitsverteilung ja, aber Tastatur statt Joystick, Touchscreen und akustischem Kanal.</td></tr>
+      <tr><td class="k">—</td><td class="y">Räumliche Orientierung, Instrumentenablesen, Linienverfolgung, Konzentration</td><td>Kein DLR-Untertest. Als allgemeines Training brauchbar, zählt aber nicht zur Abdeckung.</td></tr>
+      <tr><td class="k">fehlt</td><td class="r">ROT, SFT, RMZ, SVT, VFF, ABQ, AKM, BGT, VIM/MEK, TOM, MMT, PMA, EST, RAG, SAD</td><td>Nicht enthalten.</td></tr>
+    </tbody>
+  </table></div>
+  <div class="callout"><b class="t">Woran ich als Nächstes arbeiten würde</b>
+    <ul style="margin-top:2px">
+      <li><b>Kopfrechnen auf akustisch umstellen</b> – die Sprachausgabe ist im Modul „Akustisches Gedächtnis“ schon gebaut und ließe sich direkt übernehmen. Das ist der größte Einzelgewinn, weil KRN sonst in der falschen Modalität trainiert wird.</li>
+      <li><b>VMC als n-back ergänzen</b> – 2-back bis 5-back mit Form- und Farbsymbolen.</li>
+      <li><b>Schätzaufgaben (EST)</b> – trainiert die Gewohnheit, zu überschlagen statt zu rechnen; wirkt auf mehrere Mathe-Untertests zugleich.</li>
+      <li><b>ROT und SFT</b> – die beiden fehlenden Orientierungsklassiker.</li>
+      <li><b>PPT auf fünf Antwortoptionen</b> – kleine Änderung, macht die Aufgabe merklich schwerer.</li>
+    </ul>
+    Sag Bescheid, welche davon ich bauen soll.</div>
+</section>
+
+<section>
+  <div class="sechead"><span class="n">05</span><h2>Quellen</h2><div class="rule"></div></div>
+  <p class="src">
+    <b style="color:var(--ink)">Offiziell</b> — nicht von mir direkt geöffnet, siehe Einschränkung oben:<br>
+    DLR-Zertifikat Cockpit: <a href="https://www.dlr.de/de/me/ueber-uns/abteilungen/luft-und-raumfahrtpsychologie/zertifikat">dlr.de – Luft- und Raumfahrtpsychologie</a> ·
+    <a href="https://www.dlr.de/en/me/about-us/departments/aerospace-psychology/dlr-certificate-cockpit">englische Fassung</a><br>
+    European Flight Academy: <a href="https://www.european-flight-academy.com/en/selection-process">Auswahlverfahren</a> ·
+    <a href="https://www.european-flight-academy.com/documents/d/european-flight-academy/efa-dlr-zertifikat_en_neu">Zulassungsvoraussetzungen DLR-Zertifikat (PDF)</a> ·
+    <a href="https://www.european-flight-academy.com/en/registration-dlr-test">Anmeldung</a><br>
+    Lufthansa Group Careers: <a href="https://lufthansagroup.careers/de/austrian/pilot-in">Austrian – Pilot:in</a>
+  </p>
+  <p class="src" style="margin-top:14px">
+    <b style="color:var(--ink)">Vorbereitungsanbieter</b> — Grundlage der Modulkataloge:<br>
+    <a href="https://www.skytest.de/DLR-Test-Vorbereitung.htm">SkyTest BU/GU</a> ·
+    <a href="https://www.vimana-gmbh.de/produkt/dlr-bu-gu-cbt-trainer/">vimana CBT-Trainer</a> ·
+    <a href="https://dlr-test.training/dlr-test-vorbereitung-schritt-fuer-schritt-anleitung/">dlr-test.training</a> ·
+    <a href="https://testhelden.com/dlr-test-vorbereitung/">testhelden</a> ·
+    <a href="https://plakos-akademie.de/dlr-test-vorbereitung/">Plakos</a> ·
+    <a href="https://easyflighttraining.com/cadet-pilot-programs/">Easyflight (Stufen bei Austrian)</a>
+  </p>
+  <p class="src" style="margin-top:14px">
+    <b style="color:var(--ink)">Teilnehmerberichte</b>:<br>
+    <a href="http://www.pilotenboardwiki.de/index.php?title=DLR_Berufsgrunduntersuchung">Pilotenboard Wiki – BU</a> ·
+    <a href="http://www.pilotenboardwiki.de/index.php?title=Kopfrechnen_(BU)">Kopfrechnen (BU)</a> ·
+    <a href="http://www.pilotenboardwiki.de/index.php?title=Visuelle_Merkf%C3%A4higkeit_(BU)">Visuelle Merkfähigkeit (BU)</a> ·
+    <a href="https://www.pprune.org/professional-pilot-training-includes-ground-studies/658341-european-flight-academy-selection-process-experience.html">PPRuNe – EFA Selection Process</a> ·
+    <a href="https://de.wikipedia.org/wiki/DLR-Test">Wikipedia – DLR-Test</a>
+  </p>
+</section>
+
+</main>
+<footer><div class="wrap">
+  Unabhängige Zusammenstellung zur Vorbereitung, ohne Verbindung zum DLR, zu Austrian Airlines oder zur Lufthansa Group. Die tatsächlichen Testinhalte sind vertraulich; diese Übersicht kann sie nicht wiedergeben und ersetzt keine Auskunft der beteiligten Stellen. Verbindlich sind allein die Angaben von DLR und Unternehmen. Stand 4. September 2026 – prüfe Kosten, Gültigkeit und Mindestnoten vor der Anmeldung nach.
+</div></footer>
