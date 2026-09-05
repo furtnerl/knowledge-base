@@ -193,6 +193,21 @@ main{padding:26px 0 70px}
 .hintk{font-family:var(--f-mono);font-size:11.5px;color:var(--ink-3);margin-left:auto}
 
 /* numeric entry */
+.audioq{display:flex;flex-direction:column;align-items:center;gap:12px;padding:26px 16px 20px;background:var(--panel-2);border:1px solid var(--line);border-radius:var(--r)}
+.audioq .st{color:var(--ink-3)}
+.audioq.silent .st{color:var(--caution);font-family:var(--f-mono);text-transform:none;letter-spacing:0;font-size:14px}
+.wavebars{display:flex;gap:5px;align-items:center;height:42px}
+.wavebars i{width:5px;height:7px;border-radius:3px;background:var(--line);display:block;transition:height .16s ease,background .16s}
+.audioq.playing .wavebars i{background:var(--data)}
+.audioq.playing .wavebars i:nth-child(odd){height:30px}
+.audioq.playing .wavebars i:nth-child(even){height:42px}
+.audioq.playing .wavebars i:nth-child(3n){height:18px}
+@media (prefers-reduced-motion:no-preference){
+  .audioq.playing .wavebars i{animation:wv .9s ease-in-out infinite alternate}
+  .audioq.playing .wavebars i:nth-child(2n){animation-delay:.12s}
+  .audioq.playing .wavebars i:nth-child(3n){animation-delay:.24s}
+}
+@keyframes wv{from{height:9px}to{height:42px}}
 .numin{display:flex;align-items:center;gap:10px;margin-top:20px}
 .numin input{font-family:var(--f-mono);font-size:22px;padding:10px 14px;width:200px;background:var(--panel-2);border:1px solid var(--line);border-radius:var(--r);color:var(--ink)}
 .numin .unit{font-family:var(--f-display);text-transform:uppercase;letter-spacing:.12em;color:var(--ink-3);font-size:14px}
@@ -495,7 +510,7 @@ function runQuiz(cfg) {
     }
 
     let cur = null, optNodes = [];
-    function nextQ() {
+    async function nextQ() {
       if (aborted) return;
       if (i >= total) return finish();
       answered = false;
@@ -507,7 +522,14 @@ function runQuiz(cfg) {
 
       if (cur.eyebrow) card.appendChild(el("div", { class: "lbl", text: cur.eyebrow, style: "margin-bottom:10px" }));
       if (cur.render) { const holder = el("div"); card.appendChild(holder); cur.render(holder); }
-      if (cur.stem) card.appendChild(el("div", { class: "qtext" + (cur.monoStem ? " mono" : ""), html: cur.stem }));
+      /* Acoustic items hide the stem: the task exists only as sound. */
+      let audioBox = null;
+      if (cur.audio) {
+        audioBox = el("div", { class: "audioq" });
+        audioBox.appendChild(el("div", { class: "wavebars" }, Array.from({ length: 11 }, () => el("i"))));
+        audioBox.appendChild(el("div", { class: "st lbl", text: "Aufgabe wird angesagt" }));
+        card.appendChild(audioBox);
+      } else if (cur.stem) card.appendChild(el("div", { class: "qtext" + (cur.monoStem ? " mono" : ""), html: cur.stem }));
       if (cur.sub) card.appendChild(el("div", { class: "qsub", text: cur.sub }));
 
       const wrap = el("div", { class: "opts" + (cur.optionLayout === "two" ? " two" : "") });
@@ -522,7 +544,32 @@ function runQuiz(cfg) {
         wrap.appendChild(b); optNodes.push(b);
       });
       card.appendChild(wrap);
-      card.appendChild(el("div", { class: "qfoot" }, [el("div", { class: "hintk", text: "Tasten 1–" + cur.options.length + " zum Antworten" })]));
+      const foot0 = el("div", { class: "qfoot" });
+      let replays = cur.audio ? (cur.audio.replays || 0) : 0;
+      let replayBtn = null;
+      if (cur.audio && replays > 0) {
+        replayBtn = el("button", { class: "btn sm", text: "Nochmal hören (" + replays + "×)", onclick: () => sayTask(true) });
+        foot0.appendChild(replayBtn);
+      }
+      foot0.appendChild(el("div", { class: "hintk", text: "Tasten 1–" + cur.options.length + " zum Antworten" }));
+      card.appendChild(foot0);
+
+      async function sayTask(isReplay) {
+        if (isReplay) {
+          if (replays <= 0 || answered) return;
+          replays--;
+          replayBtn.disabled = true;
+          replayBtn.textContent = replays ? "Nochmal hören (" + replays + "×)" : "Keine Wiederholung mehr";
+        }
+        audioBox.classList.add("playing");
+        $(".st", audioBox).textContent = "Aufgabe wird angesagt";
+        const heard = await Speech.say(cur.audio.text, 0.92);
+        audioBox.classList.remove("playing");
+        $(".st", audioBox).textContent = heard ? "Ansage beendet" : "Kein Ton – Aufgabe: " + cur.audio.text;
+        if (!heard) audioBox.classList.add("silent");
+        if (isReplay && replayBtn && replays > 0) replayBtn.disabled = false;
+      }
+      if (cur.audio) { await sayTask(false); if (aborted || answered) return; }
 
       qStart = performance.now();
       clearInterval(tick); tick = setInterval(updateClock, 200); updateClock();
@@ -553,6 +600,7 @@ function runQuiz(cfg) {
         if (ix === chosen && !ok) { n.classList.add("wrong"); $(".vd", n).textContent = "Deine Wahl"; }
       });
       if (cur.explain) card.appendChild(el("div", { class: "expl", html: "<b>Lösungsweg</b>" + cur.explain }));
+      clearInterval(tick);
       const foot = $(".qfoot", card);
       foot.innerHTML = "";
       const nb = el("button", { class: "btn pri", text: i + 1 >= total ? "Auswertung" : "Weiter", onclick: () => { i++; nextQ(); } });
@@ -627,26 +675,30 @@ MathGen.arith = () => {
   const kind = pick(["mul", "div", "pct", "frac", "chain"]);
   if (kind === "mul") {
     const a = ri(12, 49), b = ri(11, 29);
-    return { stem: `Berechne im Kopf: <span class="mono">${a} &times; ${b}</span>`, v: a * b,
+    return { stem: `Berechne im Kopf: <span class="mono">${a} &times; ${b}</span>`, v: a * b, speech: `${a} mal ${b}`,
       explain: `${a} &times; ${b} = ${a} &times; ${b - b % 10} + ${a} &times; ${b % 10} = ${a * (b - b % 10)} + ${a * (b % 10)} = <b>${a * b}</b>` };
   }
   if (kind === "div") {
     const b = ri(6, 24), q = ri(11, 60), a = b * q;
-    return { stem: `Berechne im Kopf: <span class="mono">${a} &divide; ${b}</span>`, v: q,
+    return { stem: `Berechne im Kopf: <span class="mono">${a} &divide; ${b}</span>`, v: q, speech: `${a} geteilt durch ${b}`,
       explain: `${b} &times; ${q} = ${a}, also ist das Ergebnis <b>${q}</b>.` };
   }
   if (kind === "pct") {
     const p = pick([5, 12, 15, 18, 24, 25, 35, 45, 60, 75]), base = ri(6, 48) * 20;
     return { stem: `Wie viel sind <span class="mono">${p}&nbsp;%</span> von <span class="mono">${base}</span>?`, v: base * p / 100, dec: base * p % 100 ? 1 : 0,
+      speech: `${p} Prozent von ${base}`,
       explain: `1&nbsp;% von ${base} = ${base / 100}. ${p} &times; ${base / 100} = <b>${round(base * p / 100, 2)}</b>` };
   }
   if (kind === "frac") {
     const den = pick([4, 8, 16, 5, 20, 3, 6]), num = ri(1, den - 1), base = den * ri(8, 40);
+    const denName = { 3: "Drittel", 4: "Viertel", 5: "Fünftel", 6: "Sechstel", 8: "Achtel", 16: "Sechzehntel", 20: "Zwanzigstel" }[den];
     return { stem: `Wie viel sind <span class="mono">${num}/${den}</span> von <span class="mono">${base}</span>?`, v: base * num / den,
+      speech: `${num} ${denName} von ${base}`,
       explain: `${base} &divide; ${den} = ${base / den}; ${base / den} &times; ${num} = <b>${base * num / den}</b>` };
   }
   const a = ri(20, 90), b = ri(3, 12), c = ri(11, 40);
   return { stem: `Berechne im Kopf: <span class="mono">(${a} + ${c}) &times; ${b}</span>`, v: (a + c) * b,
+    speech: `${a} plus ${c}, und das Ergebnis mal ${b}`,
     explain: `${a} + ${c} = ${a + c}; ${a + c} &times; ${b} = <b>${(a + c) * b}</b>` };
 };
 
@@ -657,13 +709,13 @@ MathGen.sdt = () => {
   const dist = Math.round(gs * min / 60);
   if (mode === "time") return { eyebrow: "Speed · Distance · Time",
     stem: `Ein Flugzeug fliegt mit einer Grundgeschwindigkeit von <b>${gs} kt</b>. Wie viele <b>Minuten</b> benötigt es für <b>${dist} NM</b>?`,
-    v: min, unit: "min", explain: `Zeit = Strecke &divide; Geschwindigkeit = ${dist} &divide; ${gs} h = ${round(dist / gs, 3)} h. &times; 60 = <b>${min} min</b>.<br>Faustformel: bei ${gs} kt legt man ${round(gs / 60, 1)} NM pro Minute zurück.` };
+    v: min, unit: "min", speech: `Grundgeschwindigkeit ${gs} Knoten. Wie viele Minuten für ${dist} nautische Meilen?`, explain: `Zeit = Strecke &divide; Geschwindigkeit = ${dist} &divide; ${gs} h = ${round(dist / gs, 3)} h. &times; 60 = <b>${min} min</b>.<br>Faustformel: bei ${gs} kt legt man ${round(gs / 60, 1)} NM pro Minute zurück.` };
   if (mode === "dist") return { eyebrow: "Speed · Distance · Time",
     stem: `Grundgeschwindigkeit <b>${gs} kt</b>, Flugzeit <b>${min} Minuten</b>. Welche Strecke wird zurückgelegt?`,
-    v: dist, unit: "NM", explain: `${gs} kt = ${round(gs / 60, 1)} NM/min. ${round(gs / 60, 1)} &times; ${min} = <b>${dist} NM</b>.` };
+    v: dist, unit: "NM", speech: `Grundgeschwindigkeit ${gs} Knoten, Flugzeit ${min} Minuten. Wie viele nautische Meilen?`, explain: `${gs} kt = ${round(gs / 60, 1)} NM/min. ${round(gs / 60, 1)} &times; ${min} = <b>${dist} NM</b>.` };
   return { eyebrow: "Speed · Distance · Time",
     stem: `Für <b>${dist} NM</b> werden <b>${min} Minuten</b> benötigt. Wie hoch ist die Grundgeschwindigkeit?`,
-    v: Math.round(dist * 60 / min), unit: "kt", explain: `${dist} NM &divide; ${min} min = ${round(dist / min, 2)} NM/min. &times; 60 = <b>${Math.round(dist * 60 / min)} kt</b>.` };
+    v: Math.round(dist * 60 / min), unit: "kt", speech: `${dist} nautische Meilen in ${min} Minuten. Wie viele Knoten?`, explain: `${dist} NM &divide; ${min} min = ${round(dist / min, 2)} NM/min. &times; 60 = <b>${Math.round(dist * 60 / min)} kt</b>.` };
 };
 
 MathGen.fuel = () => {
@@ -673,12 +725,14 @@ MathGen.fuel = () => {
     return { eyebrow: "Treibstoffberechnung",
       stem: `Der Verbrauch beträgt <b>${ff} kg/h</b>. Wie viel Treibstoff wird in <b>${min} Minuten</b> verbraucht?`,
       v: Math.round(ff * min / 60), unit: "kg", step: 50,
+      speech: `Verbrauch ${ff} Kilogramm pro Stunde. Wie viel Kilogramm in ${min} Minuten?`,
       explain: `${ff} kg/h &divide; 60 = ${round(ff / 60, 1)} kg/min. &times; ${min} min = <b>${Math.round(ff * min / 60)} kg</b>.` };
   }
   const h = pick([1, 1.5, 2, 2.5, 3]), onboard = ff * h;
   return { eyebrow: "Treibstoffberechnung",
     stem: `An Bord sind <b>${onboard} kg</b> Treibstoff, der Verbrauch beträgt <b>${ff} kg/h</b>. Wie viele <b>Minuten</b> Flugzeit verbleiben?`,
     v: Math.round(h * 60), unit: "min", step: 10,
+    speech: `${onboard} Kilogramm an Bord, Verbrauch ${ff} Kilogramm pro Stunde. Wie viele Minuten Restflugzeit?`,
     explain: `${onboard} &divide; ${ff} = ${h} h = <b>${h * 60} min</b>.` };
 };
 
@@ -690,28 +744,30 @@ MathGen.descent = () => {
     return { eyebrow: "Sinkflugplanung · 3:1-Regel",
       stem: `Ein Flugzeug befindet sich auf <b>FL${fl}</b> und soll auf <b>${alt} ft</b> sinken. Nach der 3:1-Regel: Wie viele <b>NM</b> vor dem Punkt muss der Sinkflug beginnen?`,
       v: Math.round(lose / 1000 * 3), unit: "NM",
+      speech: `Flugfläche ${fl}, sinken auf ${alt} Fuß. Wie viele nautische Meilen nach der 3 zu 1 Regel?`,
       explain: `Höhendifferenz = ${fl * 100} &minus; ${alt} = ${lose} ft = ${lose / 1000} tausend Fuß.<br>3:1-Regel: ${lose / 1000} &times; 3 = <b>${Math.round(lose / 1000 * 3)} NM</b>.` };
   }
   const gs = pick([180, 220, 240, 280, 300, 320, 360]);
   return { eyebrow: "Sinkflugplanung · 3°-Profil",
     stem: `Grundgeschwindigkeit <b>${gs} kt</b>. Welche <b>Sinkrate</b> (ft/min) hält ein 3°-Anflugprofil?`,
     v: gs * 5, unit: "ft/min", step: 100,
+    speech: `Grundgeschwindigkeit ${gs} Knoten. Welche Sinkrate in Fuß pro Minute hält ein 3 Grad Profil?`,
     explain: `Faustformel für 3°: Sinkrate &asymp; Grundgeschwindigkeit &times; 5.<br>${gs} &times; 5 = <b>${gs * 5} ft/min</b>.` };
 };
 
 MathGen.convert = () => {
   const c = pick([
-    { q: v => `<b>${v} NM</b> entsprechen wie vielen Kilometern?`, gen: () => ri(4, 60) * 10, f: v => v * 1.852, u: "km", dec: 0, e: v => `1 NM = 1,852 km &rarr; ${v} &times; 1,852 = <b>${round(v * 1.852, 0)} km</b>` },
-    { q: v => `<b>${v} km</b> entsprechen wie vielen nautischen Meilen?`, gen: () => ri(5, 60) * 10, f: v => v / 1.852, u: "NM", dec: 0, e: v => `${v} &divide; 1,852 = <b>${round(v / 1.852, 0)} NM</b>` },
-    { q: v => `<b>${v} ft</b> entsprechen wie vielen Metern?`, gen: () => ri(10, 120) * 100, f: v => v * 0.3048, u: "m", dec: 0, e: v => `1 ft = 0,3048 m &rarr; ${v} &times; 0,3048 &asymp; <b>${round(v * .3048, 0)} m</b>` },
-    { q: v => `<b>${v} m</b> entsprechen wie vielen Fuß?`, gen: () => ri(3, 40) * 100, f: v => v / 0.3048, u: "ft", dec: 0, e: v => `${v} &divide; 0,3048 &asymp; ${v} &times; 3,28 = <b>${round(v / .3048, 0)} ft</b>` },
-    { q: v => `<b>${v} kg</b> entsprechen wie vielen Pfund (lbs)?`, gen: () => ri(20, 300) * 10, f: v => v * 2.2046, u: "lbs", dec: 0, e: v => `1 kg = 2,2046 lbs &rarr; ${v} &times; 2,2 &asymp; <b>${round(v * 2.2046, 0)} lbs</b>` },
-    { q: v => `<b>${v} Liter</b> Kerosin bei einer Dichte von 0,80 kg/l entsprechen wie vielen Kilogramm?`, gen: () => ri(50, 400) * 10, f: v => v * .8, u: "kg", dec: 0, e: v => `${v} &times; 0,80 = <b>${round(v * .8, 0)} kg</b>` },
-    { q: v => `<b>${v} °C</b> entsprechen wie vielen Grad Fahrenheit?`, gen: () => ri(-40, 40), f: v => v * 9 / 5 + 32, u: "°F", dec: 0, pos: false, e: v => `°F = °C &times; 1,8 + 32 = ${v} &times; 1,8 + 32 = <b>${round(v * 1.8 + 32, 0)} °F</b>` },
-    { q: v => `<b>${v} kt</b> entsprechen wie vielen Metern pro Sekunde?`, gen: () => ri(2, 24) * 10, f: v => v * .5144, u: "m/s", dec: 1, e: v => `1 kt &asymp; 0,514 m/s &rarr; ${v} &times; 0,514 = <b>${round(v * .5144, 1)} m/s</b>` }
+    { q: v => `<b>${v} NM</b> entsprechen wie vielen Kilometern?`, sp: v => `${v} nautische Meilen. Wie viele Kilometer?`, gen: () => ri(4, 60) * 10, f: v => v * 1.852, u: "km", dec: 0, e: v => `1 NM = 1,852 km &rarr; ${v} &times; 1,852 = <b>${round(v * 1.852, 0)} km</b>` },
+    { q: v => `<b>${v} km</b> entsprechen wie vielen nautischen Meilen?`, sp: v => `${v} Kilometer. Wie viele nautische Meilen?`, gen: () => ri(5, 60) * 10, f: v => v / 1.852, u: "NM", dec: 0, e: v => `${v} &divide; 1,852 = <b>${round(v / 1.852, 0)} NM</b>` },
+    { q: v => `<b>${v} ft</b> entsprechen wie vielen Metern?`, sp: v => `${v} Fuß. Wie viele Meter?`, gen: () => ri(10, 120) * 100, f: v => v * 0.3048, u: "m", dec: 0, e: v => `1 ft = 0,3048 m &rarr; ${v} &times; 0,3048 &asymp; <b>${round(v * .3048, 0)} m</b>` },
+    { q: v => `<b>${v} m</b> entsprechen wie vielen Fuß?`, sp: v => `${v} Meter. Wie viele Fuß?`, gen: () => ri(3, 40) * 100, f: v => v / 0.3048, u: "ft", dec: 0, e: v => `${v} &divide; 0,3048 &asymp; ${v} &times; 3,28 = <b>${round(v / .3048, 0)} ft</b>` },
+    { q: v => `<b>${v} kg</b> entsprechen wie vielen Pfund (lbs)?`, sp: v => `${v} Kilogramm. Wie viele Pfund?`, gen: () => ri(20, 300) * 10, f: v => v * 2.2046, u: "lbs", dec: 0, e: v => `1 kg = 2,2046 lbs &rarr; ${v} &times; 2,2 &asymp; <b>${round(v * 2.2046, 0)} lbs</b>` },
+    { q: v => `<b>${v} Liter</b> Kerosin bei einer Dichte von 0,80 kg/l entsprechen wie vielen Kilogramm?`, sp: v => `${v} Liter Kerosin bei einer Dichte von 0 Komma 8. Wie viele Kilogramm?`, gen: () => ri(50, 400) * 10, f: v => v * .8, u: "kg", dec: 0, e: v => `${v} &times; 0,80 = <b>${round(v * .8, 0)} kg</b>` },
+    { q: v => `<b>${v} °C</b> entsprechen wie vielen Grad Fahrenheit?`, sp: v => `${v} Grad Celsius. Wie viel Grad Fahrenheit?`, gen: () => ri(-40, 40), f: v => v * 9 / 5 + 32, u: "°F", dec: 0, pos: false, e: v => `°F = °C &times; 1,8 + 32 = ${v} &times; 1,8 + 32 = <b>${round(v * 1.8 + 32, 0)} °F</b>` },
+    { q: v => `<b>${v} kt</b> entsprechen wie vielen Metern pro Sekunde?`, sp: v => `${v} Knoten. Wie viele Meter pro Sekunde?`, gen: () => ri(2, 24) * 10, f: v => v * .5144, u: "m/s", dec: 1, e: v => `1 kt &asymp; 0,514 m/s &rarr; ${v} &times; 0,514 = <b>${round(v * .5144, 1)} m/s</b>` }
   ]);
   const v = c.gen();
-  return { eyebrow: "Einheitenumrechnung", stem: c.q(v), v: c.f(v), unit: c.u, dec: c.dec, positive: c.pos !== false, explain: c.e(v) };
+  return { eyebrow: "Einheitenumrechnung", stem: c.q(v), speech: c.sp(v), v: c.f(v), unit: c.u, dec: c.dec, positive: c.pos !== false, explain: c.e(v) };
 };
 
 MathGen.wind = () => {
@@ -727,6 +783,7 @@ MathGen.wind = () => {
   return { eyebrow: "Windkomponente",
     stem: `Piste <b>${pad(rwyDeg / 10)}</b> (Richtung ${pad(rwyDeg, 3)}°), Wind <b>${pad(wd, 3)}°/${spd} kt</b>. Wie groß ist die <b>${cross ? "Seitenwind" : "Gegenwind"}komponente</b>?`,
     v: cross ? xw : spd * { 30: .87, 45: .7, 60: .5, 90: 0 }[ang], unit: "kt", dec: 0, step: 2,
+    speech: `Piste ${pad(rwyDeg / 10)}, Wind aus ${pad(wd, 3)} Grad mit ${spd} Knoten. Wie groß ist die ${cross ? "Seitenwindkomponente" : "Gegenwindkomponente"}?`,
     explain: `Winkel zwischen Pistenrichtung und Wind = ${ang}°.<br>Uhrzeigerregel: 30° &rarr; 1/2, 45° &rarr; 0,7, 60° &rarr; 0,9, 90° &rarr; 1/1 des Windes als Seitenwind (Gegenwind jeweils umgekehrt).<br>${cross ? `Seitenwind = ${spd} &times; ${factor} = <b>${round(xw, 0)} kt</b>` : `Gegenwind = ${spd} &times; ${{ 30: .87, 45: .7, 60: .5, 90: 0 }[ang]} = <b>${round(spd * { 30: .87, 45: .7, 60: .5, 90: 0 }[ang], 0)} kt</b>`}` };
 };
 
@@ -736,10 +793,10 @@ MathGen.pax = () => {
   const pax = Math.round(seats * lf / 100);
   if (Math.random() < .5) return { eyebrow: "Anteilsrechnung",
     stem: `Ein Flugzeug hat <b>${seats} Sitzplätze</b> und ist zu <b>${lf} %</b> ausgelastet. Wie viele Passagiere sind an Bord?`,
-    v: pax, unit: "Pax", explain: `${seats} &times; ${lf / 100} = <b>${pax} Passagiere</b>.` };
+    v: pax, unit: "Pax", speech: `${seats} Sitzplätze, ${lf} Prozent Auslastung. Wie viele Passagiere?`, explain: `${seats} &times; ${lf / 100} = <b>${pax} Passagiere</b>.` };
   return { eyebrow: "Anteilsrechnung",
     stem: `Von <b>${seats} Sitzplätzen</b> sind <b>${pax}</b> belegt. Wie hoch ist die Auslastung in Prozent?`,
-    v: Math.round(pax / seats * 100), unit: "%", explain: `${pax} &divide; ${seats} = ${round(pax / seats, 3)} = <b>${Math.round(pax / seats * 100)} %</b>.` };
+    v: Math.round(pax / seats * 100), unit: "%", speech: `Von ${seats} Sitzplätzen sind ${pax} belegt. Wie viel Prozent Auslastung?`, explain: `${pax} &divide; ${seats} = ${round(pax / seats, 3)} = <b>${Math.round(pax / seats * 100)} %</b>.` };
 };
 
 MathGen.time = () => {
@@ -755,6 +812,7 @@ MathGen.time = () => {
   return { eyebrow: "Zeitrechnung (UTC)",
     stem: `Abflug um <b>${pad(dh)}:${pad(dm)} UTC</b>, geplante Flugzeit <b>${fh} h ${pad(fm)} min</b>. Wann ist die geplante Ankunft (UTC)?`,
     opts: textOptions(right, wrongs),
+    speech: `Abflug ${pad(dh)} Uhr ${pad(dm)} UTC, Flugzeit ${fh} Stunden ${pad(fm)} Minuten. Wann ist die Ankunft?`,
     explain: `${pad(dh)}:${pad(dm)} + ${fh}:${pad(fm)} = ${pad(dh + fh)}:${pad(dm + fm)} &rarr; umgerechnet <b>${right} UTC</b>.` };
 };
 
@@ -764,12 +822,14 @@ MathGen.isa = () => {
   if (Math.random() < .5) return { eyebrow: "Standardatmosphäre",
     stem: `Wie hoch ist die <b>ISA-Standardtemperatur</b> auf <b>FL${fl}</b>?`,
     v: isaT, unit: "°C", positive: false, step: 3,
+    speech: `Wie hoch ist die ISA Standardtemperatur auf Flugfläche ${fl}?`,
     explain: `ISA: 15 °C am Boden, &minus;2 °C pro 1000 ft.<br>15 &minus; (2 &times; ${fl / 10}) = <b>${isaT} °C</b>.` };
   const dev = pick([-10, -5, 5, 8, 10, 12, 15]);
   const oat = isaT + dev;
   return { eyebrow: "Standardatmosphäre",
     stem: `Auf <b>FL${fl}</b> wird eine Außentemperatur von <b>${oat} °C</b> gemessen. Wie groß ist die <b>ISA-Abweichung</b>?`,
     v: dev, unit: "°C", positive: false, step: 3,
+    speech: `Flugfläche ${fl}, Außentemperatur ${oat} Grad Celsius. Wie groß ist die ISA Abweichung?`,
     explain: `ISA auf FL${fl} = 15 &minus; ${2 * fl / 10} = ${isaT} °C.<br>Abweichung = ${oat} &minus; (${isaT}) = <b>${dev > 0 ? "+" : ""}${dev} °C</b>.` };
 };
 
@@ -779,6 +839,7 @@ MathGen.altimeter = () => {
   return { eyebrow: "Höhenmessereinstellung",
     stem: `Der Höhenmesser steht auf <b>1013 hPa</b>, das aktuelle QNH beträgt <b>${qnh} hPa</b>. Um wie viele <b>Fuß</b> weicht die angezeigte Höhe von der tatsächlichen ab? (27 ft pro hPa)`,
     v: Math.abs(d) * 27, unit: "ft", step: 20,
+    speech: `Höhenmesser steht auf 1013 Hektopascal, das QNH beträgt ${qnh}. Um wie viele Fuß weicht die Anzeige ab? 27 Fuß pro Hektopascal.`,
     explain: `Differenz = |${qnh} &minus; 1013| = ${Math.abs(d)} hPa.<br>${Math.abs(d)} &times; 27 = <b>${Math.abs(d) * 27} ft</b>. Bei ${qnh} hPa (${d < 0 ? "tiefer" : "höher"} als Standard) zeigt der Höhenmesser ${d < 0 ? "zu viel" : "zu wenig"} an.` };
 };
 
@@ -788,6 +849,7 @@ MathGen.climb = () => {
   return { eyebrow: "Steigprofil",
     stem: `Ein Flugzeug steigt mit <b>${roc} ft/min</b> bei einer Grundgeschwindigkeit von <b>${gs} kt</b>. Wie viele <b>Fuß pro NM</b> gewinnt es?`,
     v: Math.round(roc / (gs / 60)), unit: "ft/NM", step: 20,
+    speech: `Steigrate ${roc} Fuß pro Minute bei ${gs} Knoten Grundgeschwindigkeit. Wie viele Fuß pro nautische Meile?`,
     explain: `${gs} kt = ${round(gs / 60, 1)} NM/min.<br>${roc} ft/min &divide; ${round(gs / 60, 1)} NM/min = <b>${Math.round(roc / (gs / 60))} ft/NM</b>.` };
 };
 
@@ -798,6 +860,7 @@ MathGen.ratio = () => {
   return { eyebrow: "Proportionalität",
     stem: `<b>${p1} Betankungspumpen</b> füllen einen Tank in <b>${t1} Minuten</b>. Wie lange brauchen <b>${p2} Pumpen</b> gleicher Leistung?`,
     v: t2, unit: "min", dec: t2 % 1 ? 1 : 0,
+    speech: `${p1} Pumpen füllen einen Tank in ${t1} Minuten. Wie lange brauchen ${p2} Pumpen?`,
     explain: `Gesamtarbeit = ${p1} &times; ${t1} = ${p1 * t1} Pumpenminuten.<br>${p1 * t1} &divide; ${p2} = <b>${round(t2, 1)} min</b> (umgekehrt proportional).` };
 };
 
@@ -818,17 +881,22 @@ MathGen.series = () => {
 const MATH_GENS = [MathGen.arith, MathGen.sdt, MathGen.fuel, MathGen.descent, MathGen.convert, MathGen.wind,
                    MathGen.pax, MathGen.time, MathGen.isa, MathGen.altimeter, MathGen.climb, MathGen.ratio, MathGen.series];
 
-function mathQuestion() {
-  const g = lvl() === 1 ? pick([MathGen.arith, MathGen.sdt, MathGen.fuel, MathGen.convert, MathGen.pax, MathGen.series]) : pick(MATH_GENS);
-  const q = g();
+function mathQuestion(mode) {
+  const easy = [MathGen.arith, MathGen.sdt, MathGen.fuel, MathGen.convert, MathGen.pax, MathGen.series];
+  let q, guard = 0;
+  do { q = (lvl() === 1 ? pick(easy) : pick(MATH_GENS))(); }
+  while (mode === "audio" && !q.speech && guard++ < 60);   /* Zahlenreihen lassen sich nicht ansagen */
+  const acoustic = mode === "audio" && !!q.speech;
   return {
-    eyebrow: q.eyebrow || "Kopfrechnen",
+    eyebrow: (q.eyebrow || "Kopfrechnen") + (acoustic ? " · Ansage" : ""),
     stem: q.stem,
-    sub: "Ohne Taschenrechner und ohne Notizen rechnen.",
-    plain: q.stem.replace(/<[^>]+>/g, ""),
+    audio: acoustic ? { text: q.speech, replays: lvl() === 3 ? 0 : 1 } : null,
+    sub: acoustic ? "Die Aufgabe wird nur angesagt. Ohne Taschenrechner und ohne Notizen rechnen."
+                  : "Ohne Taschenrechner und ohne Notizen rechnen.",
+    plain: (acoustic ? "[angesagt] " : "") + q.stem.replace(/<[^>]+>/g, ""),
     numericOpts: !q.opts,
     options: q.opts || numOptions(q.v, { unit: q.unit, dec: q.dec || 0, positive: q.positive, step: q.step }),
-    explain: q.explain
+    explain: (acoustic ? `Angesagt war: <b>${esc(q.speech)}</b><br>` : "") + q.explain
   };
 }
 </script>
@@ -2136,23 +2204,24 @@ function cubeQuestion() {
     c[k] = { sym: c[k].sym, u: rot(n, c[k].u, pick([1, 2, 3])) };
     return c;
   };
-  const makers = lvl() === 1 ? [mkSwap, mkForeign, mkSwap, mkForeign]
-    : lvl() === 2 ? [mkSwap, mkForeign, mkRot, mkSwap]
-    : [mkRot, mkRot, mkSwap, mkRot];
+  const makers = lvl() === 1 ? [mkSwap, mkForeign, mkSwap, mkForeign, mkSwap]
+    : lvl() === 2 ? [mkSwap, mkForeign, mkRot, mkSwap, mkForeign]
+    : [mkRot, mkRot, mkSwap, mkRot, mkRot];
 
   const right = sig(correct);
   const seen = new Set([right]);
   const wrong = [];
   let guard = 0;
-  while (wrong.length < 3 && guard++ < 400) {
+  while (wrong.length < 4 && guard++ < 600) {
     const cand = pick(makers)();
     const sg = sig(cand);
     if (seen.has(sg)) continue;
     seen.add(sg); wrong.push(cand);
   }
-  while (wrong.length < 3) {                 /* safety net, never expected */
-    const c = mkSwap(); if (!seen.has(sig(c))) { seen.add(sig(c)); wrong.push(c); }
-    else break;
+  let fill = 0;
+  while (wrong.length < 4 && fill++ < 200) {   /* safety net, never expected */
+    const c = pick([mkSwap, mkForeign, mkRot])();
+    if (!seen.has(sig(c))) { seen.add(sig(c)); wrong.push(c); }
   }
   const opts = shuffle([{ f: correct, ok: true }].concat(wrong.map(f => ({ f, ok: false }))));
   /* Describe each cube relative to the right one, so a rotation-only distractor
@@ -3019,18 +3088,560 @@ function runSKT() {
 }
 </script>
 <script>
+/* ═══ Gemeinsamer Vorschaltdialog für die Module mit Ansage ══════════ */
+function audioIntro(cfg) {
+  return new Promise(resolve => {
+    const root = el("div", { class: "stage" });
+    const card = el("div", { class: "card briefing" });
+    card.appendChild(el("div", { class: "kind", text: cfg.kind }));
+    card.appendChild(el("h1", { text: "Tonprüfung" }));
+    card.appendChild(el("p", { text: Speech.supported ? cfg.intro : cfg.introSilent }));
+    const status = el("p", { class: "note", style: "margin-top:12px" });
+    let mode = Speech.supported ? "audio" : "visual";
+    const seg = el("div", { class: "seg", style: "margin-top:18px" });
+    const setMode = m => { mode = m; Array.from(seg.children).forEach(b => b.setAttribute("aria-pressed", String(b.dataset.m === m))); };
+    [["audio", cfg.audioLabel], ["visual", cfg.visualLabel]].forEach(([m, label]) => {
+      seg.appendChild(el("button", { type: "button", text: label, "data-m": m,
+        disabled: m === "audio" && !Speech.supported ? "" : null, onclick: () => setMode(m) }));
+    });
+    setMode(mode);
+    card.appendChild(el("div", { class: "lbl", text: "Darbietung", style: "margin-top:20px;margin-bottom:8px" }));
+    card.appendChild(seg);
+    const foot = el("div", { class: "qfoot", style: "margin-top:20px" });
+    foot.append(
+      el("button", { class: "btn sm", text: "Probe abspielen", disabled: Speech.supported ? null : "",
+        onclick: async () => {
+          status.textContent = "Es sollte „vier – sieben – zwei“ zu hören sein.";
+          const ok = await Speech.say("4", 0.9); await wait(260); await Speech.say("7", 0.9); await wait(260); await Speech.say("2", 0.9);
+          if (!ok) { status.textContent = "Es kam kein Ton an. Wechsle bitte auf die stille Darstellung."; setMode("visual"); }
+        } }),
+      el("button", { class: "btn pri", text: "Los", onclick: () => { document.onkeydown = null; resolve(mode); } }),
+      el("div", { class: "hintk", text: "Enter" }));
+    card.append(status, foot);
+    root.appendChild(card);
+    view().innerHTML = ""; view().appendChild(root);
+    document.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); document.onkeydown = null; resolve(mode); }
+      if (e.key === "Escape") go("home"); };
+  });
+}
+
+/* ═══ KRN · Kopfrechnen mit Ansage ═══════════════════════════════════
+   In der BU kommen die Rechenaufgaben ausschließlich über Kopfhörer.  */
+async function runKRN() {
+  let aborted = false;
+  State.running = { abort: () => { aborted = true; Speech.stop(); } };
+  const mode = await audioIntro({
+    kind: "Kopfrechnen · KRN",
+    audioLabel: "Ansage", visualLabel: "Still anzeigen",
+    intro: "Die Aufgaben werden nur vorgelesen – du siehst sie nicht. Prüfe zuerst, ob du die Ansage hörst, und stelle die Lautstärke ein. Wenn nichts ankommt, wechsle auf die stille Darstellung; dann stehen die Aufgaben wie gewohnt auf dem Bildschirm.",
+    introSilent: "Dieser Browser stellt keine Sprachausgabe bereit. Das Modul läuft in der stillen Darstellung – die Aufgaben stehen dann auf dem Bildschirm. Beachte: In der Berufsgrunduntersuchung werden sie ausschließlich angesagt."
+  });
+  if (aborted) return;
+  return runQuiz({ count: 12, perQ: mode === "audio" ? 32 : 45, next: () => mathQuestion(mode) });
+}
+
+/* ═══ VMC · Visuelles Gedächtnis (n-back) ════════════════════════════
+   Symbole laufen einzeln durch; verglichen wird immer mit dem Symbol
+   n Schritte zuvor. n wird vor jedem Block neu angesagt.               */
+const VMC_SHAPES = ["kreis", "quadrat", "dreieck", "raute"];
+const VMC_COLORS = [["--data", "cyan"], ["--caution", "gelb"], ["--target", "magenta"]];
+function drawVmcSymbol(x, w, h, sym) {
+  x.clearRect(0, 0, w, h);
+  const cx = w / 2, cy = h / 2, r = Math.min(w, h) * .30;
+  x.beginPath();
+  if (sym.shape === 0) x.arc(cx, cy, r, 0, 7);
+  else if (sym.shape === 1) x.rect(cx - r, cy - r, r * 2, r * 2);
+  else if (sym.shape === 2) { x.moveTo(cx, cy - r); x.lineTo(cx + r * .95, cy + r * .8); x.lineTo(cx - r * .95, cy + r * .8); x.closePath(); }
+  else { x.moveTo(cx, cy - r); x.lineTo(cx + r, cy); x.lineTo(cx, cy + r); x.lineTo(cx - r, cy); x.closePath(); }
+  x.fillStyle = cssv(VMC_COLORS[sym.col][0]); x.fill();
+  x.strokeStyle = cssv("--ink"); x.lineWidth = 1.8; x.stroke();
+}
+function vmcBlock(n, len, show, ix, blocks) {
+  return new Promise(resolve => {
+    const seq = [];
+    for (let i = 0; i < len; i++) {
+      let s;
+      if (i >= n && Math.random() < .42) s = { shape: seq[i - n].shape, col: seq[i - n].col };
+      else {
+        do { s = { shape: ri(0, VMC_SHAPES.length - 1), col: ri(0, VMC_COLORS.length - 1) }; }
+        while (i >= n && s.shape === seq[i - n].shape && s.col === seq[i - n].col);
+      }
+      seq.push(s);
+    }
+    let i = 0, answered = false, right = 0, wrong = 0, missed = 0, scored = 0;
+    const rts = [];
+    let timer = null, running = true;
+
+    const root = el("div", { class: "stage" });
+    const head = el("div", { class: "qhead" }, [
+      el("div", { class: "qcount", text: "BLOCK " + pad(ix) + " / " + pad(blocks) + " · " + n + "-BACK" }),
+      el("div", { class: "clock mono" })]);
+    const clock = $(".clock", head);
+    const tbar = el("div", { class: "tbar" }, [el("i")]);
+    const card = el("div", { class: "card qcard" });
+    card.appendChild(el("div", { class: "target-legend", style: "margin-bottom:16px" }, [
+      el("div", { class: "lbl", text: "Regel" }),
+      el("div", { class: "note", style: "text-align:left", html: `Vergleiche jedes Symbol mit dem Symbol <b style="color:var(--ink)">${n} Schritte zuvor</b>. Stimmen <b style="color:var(--ink)">Form und Farbe</b> überein, ist es „gleich“.` })
+    ]));
+    const stageBox = el("div", { style: "display:grid;place-items:center;gap:12px;min-height:210px" });
+    const cv = el("canvas", { width: 170, height: 170, style: "width:170px;height:170px" });
+    const pos = el("div", { class: "note mono" });
+    stageBox.append(cv, pos);
+    card.appendChild(stageBox);
+    const btnRow = el("div", { style: "display:flex;gap:9px;justify-content:center;margin-top:6px;flex-wrap:wrap" });
+    btnRow.append(
+      el("button", { class: "btn sm", type: "button", text: "Gleich  [A]", onclick: () => respond(true) }),
+      el("button", { class: "btn sm", type: "button", text: "Ungleich  [L]", onclick: () => respond(false) }));
+    card.appendChild(btnRow);
+    const fb = el("div", { class: "note", style: "text-align:center;min-height:20px;margin-top:9px" });
+    card.appendChild(fb);
+    root.append(head, tbar, card);
+    view().innerHTML = ""; view().appendChild(root);
+
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const paint = s => {
+      if (cv.width !== 170 * dpr) { cv.width = 170 * dpr; cv.height = 170 * dpr; }
+      const x = cv.getContext("2d");
+      x.setTransform(dpr, 0, 0, dpr, 0, 0);
+      if (s) drawVmcSymbol(x, 170, 170, s); else x.clearRect(0, 0, 170, 170);
+    };
+    let shownAt = 0;
+    function step() {
+      if (!running) return;
+      if (i >= len) return finish();
+      answered = false;
+      paint(seq[i]);
+      const comparable = i >= n;
+      pos.textContent = comparable ? "Symbol " + (i + 1) + " von " + len : "Symbol " + (i + 1) + " – noch kein Vergleich möglich";
+      btnRow.querySelectorAll("button").forEach(b => b.disabled = !comparable);
+      shownAt = performance.now();
+      setStrip([{ k: "Block", v: ix + "/" + blocks }, { k: "n", v: String(n) },
+        { k: "Richtig", v: right + "/" + scored }, { k: "Fehler", v: String(wrong), tone: wrong ? "caution" : "" }]);
+      timer = setTimeout(() => {
+        if (!running) return;
+        if (comparable && !answered) { missed++; scored++; fb.textContent = "zu langsam"; fb.style.color = "var(--caution)"; }
+        i++; paint(null); setTimeout(step, 170);
+      }, show);
+    }
+    function respond(same) {
+      if (!running || answered || i >= len || i < n) return;
+      answered = true;
+      clearTimeout(timer);
+      const isSame = seq[i].shape === seq[i - n].shape && seq[i].col === seq[i - n].col;
+      scored++;
+      if (same === isSame) { right++; rts.push(performance.now() - shownAt); fb.textContent = "richtig"; fb.style.color = "var(--ok)"; }
+      else { wrong++; fb.textContent = "falsch"; fb.style.color = "var(--warn)"; }
+      i++; paint(null); setTimeout(step, 170);
+    }
+    const kd = e => {
+      const k = e.key.toLowerCase();
+      if (k === "a") { e.preventDefault(); respond(true); }
+      else if (k === "l") { e.preventDefault(); respond(false); }
+      else if (k === "escape") { stop(); go("home"); }
+    };
+    window.addEventListener("keydown", kd);
+    const total = len * show + 1200, t0 = performance.now();
+    const iv = setInterval(() => {
+      const left = total - (performance.now() - t0), frac = clamp(left / total, 0, 1);
+      clock.textContent = fmtClock(left);
+      const bar = tbar.firstChild; bar.style.width = (frac * 100) + "%";
+      bar.className = frac < .2 ? "crit" : frac < .4 ? "low" : "";
+    }, 150);
+    function stop() { running = false; clearTimeout(timer); clearInterval(iv); window.removeEventListener("keydown", kd); }
+    State.running = { abort: stop };
+    function finish() { stop(); resolve({ n, right, wrong, missed, scored, rts }); }
+    step();
+  });
+}
+async function runVMC() {
+  const conf = { 1: { ns: [2, 2, 3], len: 16, show: 2500 },
+                 2: { ns: [2, 3, 4], len: 20, show: 1950 },
+                 3: { ns: [3, 4, 5], len: 24, show: 1550 } }[lvl()];
+  const t0 = performance.now();
+  const res = [];
+  for (let b = 0; b < conf.ns.length; b++) {
+    const r = await vmcBlock(conf.ns[b], conf.len, conf.show, b + 1, conf.ns.length);
+    if (!r) return;
+    res.push(r);
+  }
+  const right = res.reduce((s, r) => s + r.right, 0);
+  const scored = res.reduce((s, r) => s + r.scored, 0);
+  const wrong = res.reduce((s, r) => s + r.wrong, 0);
+  const missed = res.reduce((s, r) => s + r.missed, 0);
+  const allRt = [].concat.apply([], res.map(r => r.rts));
+  const rt = allRt.length ? Math.round(allRt.reduce((a, b) => a + b, 0) / allRt.length) : 0;
+  return {
+    correct: right, total: scored,
+    score: scored ? Math.round(right / scored * 100) : 0,
+    timeMs: performance.now() - t0,
+    detail: res.map(r => ({
+      q: r.n + "-back · " + r.scored + " Vergleiche",
+      your: r.right + " richtig, " + r.wrong + " falsch, " + r.missed + " verpasst",
+      right: r.scored + " richtig", ok: r.wrong === 0 && r.missed === 0
+    })).concat([{ q: "Mittlere Reaktionszeit", your: rt ? rt + " ms" : "—", right: "< 1200 ms", ok: rt > 0 && rt < 1200 }])
+  };
+}
+
+/* ═══ EST · Schätzaufgaben ═══════════════════════════════════════════
+   Der exakte Wert ist in der Zeit nicht zu rechnen; alle Optionen sind
+   gerundet, gesucht ist der nächstliegende.                            */
+function estQuestion() {
+  const kind = pick(["mul", "div", "pct", "sum", "frac", "sq", "root"]);
+  let v = 0, stem = "", how = "";
+  if (kind === "mul") {
+    const a = ri(180, 940), b = ri(13, 89);
+    v = a * b; stem = `${a} &times; ${b}`;
+    how = `${a} &asymp; ${Math.round(a / 100) * 100}, ${b} &asymp; ${Math.round(b / 10) * 10} &rarr; ${Math.round(a / 100) * 100 * Math.round(b / 10) * 10}`;
+  } else if (kind === "div") {
+    const b = ri(17, 89), q = ri(24, 480), a = b * q + ri(0, b - 1);
+    v = a / b; stem = `${a} &divide; ${b}`;
+    how = `${b} &asymp; ${Math.round(b / 10) * 10}; wie oft passt ${Math.round(b / 10) * 10} in ${a}?`;
+  } else if (kind === "pct") {
+    const p = ri(6, 94), base = ri(120, 980) * 10;
+    v = base * p / 100; stem = `${p}&nbsp;% von ${base}`;
+    how = `10&nbsp;% von ${base} = ${base / 10}; davon rund ${Math.round(p / 10)} Zehntel`;
+  } else if (kind === "sum") {
+    const n = ri(5, 7), parts = Array.from({ length: n }, () => ri(120, 890));
+    v = parts.reduce((a, b) => a + b, 0);
+    stem = parts.join(" + ");
+    how = `Jeder Summand liegt bei rund ${Math.round(v / n / 100) * 100}; ${n} &times; ${Math.round(v / n / 100) * 100}`;
+  } else if (kind === "frac") {
+    const den = ri(6, 13), num = ri(2, den - 1), base = ri(90, 900) * 4;
+    v = base * num / den; stem = `${num}/${den} von ${base}`;
+    how = `${num}/${den} &asymp; ${(num / den).toFixed(1)} &rarr; ${(num / den).toFixed(1)} &times; ${base}`;
+  } else if (kind === "sq") {
+    const a = ri(34, 189); v = a * a; stem = `${a}&sup2;`;
+    how = `${a} &asymp; ${Math.round(a / 10) * 10} &rarr; ${Math.round(a / 10) * 10}&sup2; = ${Math.pow(Math.round(a / 10) * 10, 2)}`;
+  } else {
+    const a = ri(20, 140), n2 = a * a + ri(-40, 40); v = Math.sqrt(Math.max(1, n2));
+    stem = `&radic;${Math.max(1, n2)}`;
+    how = `Welche Zahl mal sich selbst liegt bei ${Math.max(1, n2)}? ${Math.round(a / 10) * 10}&sup2; = ${Math.pow(Math.round(a / 10) * 10, 2)}`;
+  }
+  /* Alle Optionen auf zwei signifikante Stellen runden, damit die richtige
+     nicht schon an ihren Endziffern zu erkennen ist. */
+  const sig2 = x => {
+    if (x === 0) return 0;
+    const e = Math.floor(Math.log10(Math.abs(x))) - 1;
+    const f = Math.pow(10, e);
+    return Math.round(x / f) * f;
+  };
+  const target = sig2(v);
+  const seen = new Set([target]);
+  const opts = [];
+  const factors = shuffle([0.31, 0.46, 0.58, 1.42, 1.7, 2.3, 3.1]);
+  for (const f of factors) {
+    if (opts.length === 3) break;
+    const d = sig2(v * f);
+    if (d === target || seen.has(d) || Math.abs(d - v) < Math.abs(target - v) * 1.5 + 1) continue;
+    seen.add(d); opts.push(d);
+  }
+  let g = 4;
+  while (opts.length < 3) { const d = sig2(v * (4 + g)); if (!seen.has(d)) { seen.add(d); opts.push(d); } g++; }
+  const fmt = x => x.toLocaleString("de-AT", { maximumFractionDigits: 1 });
+  return {
+    eyebrow: "Schätzaufgabe · EST",
+    stem: `Welcher Wert kommt dem Ergebnis am nächsten?<br><span class="mono" style="font-size:24px;display:inline-block;margin-top:10px">${stem}</span>`,
+    plain: "Schätzen: " + stem.replace(/<[^>]+>/g, ""),
+    sub: "Nicht ausrechnen – überschlagen. Die Zeit reicht nicht für den exakten Wert.",
+    numericOpts: true,
+    options: textOptions(fmt(target), opts.map(fmt)),
+    explain: `Überschlag: ${how}.<br>Genau wären es ${round(v, 1)}, gerundet <b>${fmt(target)}</b>. Wer versucht, exakt zu rechnen, verliert die Aufgabe an der Zeit.`
+  };
+}
+</script>
+<script>
+/* ═══ ROT · Würfelrotationstest ══════════════════════════════════════
+   Zwei Würfel sind genau dann derselbe, wenn eine der 24 Drehungen den
+   einen in den anderen überführt. Genau das prüft canonFaces().        */
+const MATX = {
+  mul: (A, B) => A.map(r => [0, 1, 2].map(j => r[0] * B[0][j] + r[1] * B[1][j] + r[2] * B[2][j])),
+  vec: (A, v) => A.map(r => r[0] * v[0] + r[1] * v[1] + r[2] * v[2]),
+  key: A => A.map(r => r.join(",")).join("|")
+};
+const R_ID = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
+const R_X = [[1, 0, 0], [0, 0, -1], [0, 1, 0]];
+const R_Y = [[0, 0, 1], [0, 1, 0], [-1, 0, 0]];
+const R_Z = [[0, -1, 0], [1, 0, 0], [0, 0, 1]];
+const CUBE_ROTS = (() => {
+  const seen = new Map([[MATX.key(R_ID), R_ID]]);
+  const q = [R_ID];
+  while (q.length) {
+    const A = q.shift();
+    for (const B of [R_X, R_Y, R_Z]) {
+      const C = MATX.mul(B, A), k = MATX.key(C);
+      if (!seen.has(k)) { seen.set(k, C); q.push(C); }
+    }
+  }
+  return Array.from(seen.values());
+})();
+const AXES6 = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];
+function rotateFaces(faces, R) {
+  const out = {};
+  for (const k in faces) {
+    const f = faces[k];
+    const n = k.split(",").map(Number);
+    out[V.key(MATX.vec(R, n))] = { sym: f.sym, u: MATX.vec(R, f.u) };
+  }
+  return out;
+}
+const faceSig = faces => AXES6.map(n => {
+  const f = faces[V.key(n)];
+  return f ? f.sym.name + "@" + V.key(f.u) : "-";
+}).join("/");
+const canonFaces = faces => {
+  let best = null;
+  for (const R of CUBE_ROTS) { const s = faceSig(rotateFaces(faces, R)); if (best === null || s < best) best = s; }
+  return best;
+};
+const visibleNames = faces => VISIBLE.map(n => faces[V.key(n)].sym.name);
+const visibleSig = faces => VISIBLE.map(n => { const f = faces[V.key(n)]; return f.sym.name + "@" + V.key(f.u); }).join("/");
+
+function makeCube() {
+  const syms = shuffle(CUBE_SYMBOLS).slice(0, 6);
+  const faces = {};
+  AXES6.forEach((n, i) => {
+    const perp = AXES6.find(a => Math.abs(a[0] * n[0] + a[1] * n[1] + a[2] * n[2]) < .5);
+    let u = perp;
+    for (let t = ri(0, 3); t > 0; t--) u = V.cross(n, u);
+    faces[V.key(n)] = { sym: syms[i], u };
+  });
+  return faces;
+}
+function rotQuestion() {
+  const ref = makeCube();
+  const refCanon = canonFaces(ref);
+  const refVis = new Set(visibleNames(ref));
+  const shared = f => visibleNames(f).filter(nm => refVis.has(nm)).length;
+
+  /* Richtige Antwort: dieselbe Würfelbeschriftung, nur gedreht – und so
+     gedreht, dass mindestens zwei bekannte Seiten sichtbar bleiben. */
+  /* Genau zwei bekannte Zeichen bleiben sichtbar: der Anblick ändert sich
+     wirklich, bleibt aber entscheidbar. */
+  let correct = null;
+  const rots = shuffle(CUBE_ROTS.filter(R => MATX.key(R) !== MATX.key(R_ID)));
+  for (const R of rots) { const c = rotateFaces(ref, R); if (shared(c) === 2) { correct = c; break; } }
+  if (!correct) for (const R of rots) {
+    const c = rotateFaces(ref, R);
+    if (shared(c) >= 2 && visibleSig(c) !== visibleSig(ref)) { correct = c; break; }
+  }
+  if (!correct) correct = rotateFaces(ref, rots[0]);
+
+  const mkWrong = () => {
+    const f = {};
+    for (const k in ref) f[k] = { sym: ref[k].sym, u: ref[k].u };
+    if (Math.random() < .55) {                 /* zwei Seiten tauschen */
+      const [a, b] = sample(AXES6, 2);
+      const ka = V.key(a), kb = V.key(b);
+      const t = f[ka].sym; f[ka].sym = f[kb].sym; f[kb].sym = t;
+    } else {                                    /* eine Seite verdreht */
+      const n = pick(AXES6), k = V.key(n);
+      let u = f[k].u;
+      for (let t = ri(1, 3); t > 0; t--) u = V.cross(n, u);
+      f[k] = { sym: f[k].sym, u };
+    }
+    return rotateFaces(f, pick(CUBE_ROTS));
+  };
+  const seen = new Set([visibleSig(correct)]);
+  const wrong = [];
+  let guard = 0;
+  while (wrong.length < 3 && guard++ < 600) {
+    const c = mkWrong();
+    if (canonFaces(c) === refCanon) continue;   /* wäre doch derselbe Würfel */
+    if (shared(c) !== 2) continue;              /* gleicher Anblickwechsel wie bei der Lösung */
+    const sg = visibleSig(c);
+    if (seen.has(sg)) continue;
+    seen.add(sg); wrong.push(c);
+  }
+  while (wrong.length < 3) {
+    const c = mkWrong();
+    if (canonFaces(c) !== refCanon && !seen.has(visibleSig(c))) { seen.add(visibleSig(c)); wrong.push(c); }
+  }
+  const opts = shuffle([{ f: correct, ok: true }].concat(wrong.map(f => ({ f, ok: false }))));
+  return {
+    eyebrow: "Würfelrotation · ROT",
+    plain: "Gedrehten Würfel erkennen (" + visibleNames(ref).join(", ") + ")",
+    render: node => {
+      const w = el("div", { class: "instwrap" });
+      instFig(w, 190, (x, s) => drawCube(x, s, ref), "Vorlage");
+      node.appendChild(w);
+    },
+    stem: "Welcher Würfel ist <b>derselbe</b>, nur gedreht?",
+    sub: "Alle sechs Seiten tragen verschiedene Zeichen. Achte auf die Anordnung zueinander, nicht auf die einzelne Seite.",
+    optionLayout: "two",
+    options: opts.map(o => ({
+      plain: visibleNames(o.f).join(" / "), ok: o.ok, faces: o.f, refFaces: ref,
+      render: n => { const w = el("div", { style: "display:flex;justify-content:center" });
+        canvasFor(w, 138, (x, s) => drawCube(x, s, o.f)); n.appendChild(w); }
+    })),
+    explain: "Nimm zwei Zeichen, die du auf der Vorlage siehst, und präge dir ihre Lage zueinander ein – welches liegt oben, welches rechts davon. Diese Drehrichtung bleibt bei jeder Drehung erhalten. Ein Würfel, bei dem dieselben zwei Zeichen andersherum angeordnet sind, ist gespiegelt und kann nie derselbe Würfel sein."
+  };
+}
+
+/* ═══ SFT · Schlauchfiguren ══════════════════════════════════════════
+   Ein Schlauch läuft durch einen durchsichtigen Kasten. Gesucht ist die
+   Fläche, an der er wieder austritt.                                    */
+const SFT_FACES = [
+  { n: [0, 1, 0], no: 1 }, { n: [1, 0, 0], no: 2 }, { n: [0, 0, 1], no: 3 },
+  { n: [0, -1, 0], no: 4 }, { n: [-1, 0, 0], no: 5 }, { n: [0, 0, -1], no: 6 }
+];
+function makeTube(steps) {
+  const DIRS = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];
+  for (let attempt = 0; attempt < 400; attempt++) {
+    const entry = pick(SFT_FACES);
+    const a = entry.n.findIndex(v => v !== 0), s = entry.n[a];
+    const cell = [ri(-1, 1), ri(-1, 1), ri(-1, 1)];
+    cell[a] = s;
+    const pts = [cell.slice()];
+    const occ = new Set([cell.join(",")]);
+    let last = entry.n.map(v => -v);            /* Bewegung nach innen */
+    let cur = cell.slice(), ok = true;
+    for (let k = 0; k < steps; k++) {
+      const cand = shuffle(DIRS).filter(d =>
+        !(d[0] === -last[0] && d[1] === -last[1] && d[2] === -last[2]));
+      let moved = false;
+      for (const d of cand) {
+        const nx = [cur[0] + d[0], cur[1] + d[1], cur[2] + d[2]];
+        if (nx.some(v => v < -1 || v > 1)) continue;
+        if (occ.has(nx.join(","))) continue;
+        cur = nx; last = d; occ.add(nx.join(",")); pts.push(nx.slice()); moved = true; break;
+      }
+      if (!moved) { ok = false; break; }
+    }
+    if (!ok) continue;
+    /* Austritt: eine Richtung, in der die letzte Zelle an der Wand liegt */
+    const exits = SFT_FACES.filter(f => {
+      const ax = f.n.findIndex(v => v !== 0);
+      if (cur[ax] !== f.n[ax]) return false;
+      return !(f.n[0] === -last[0] && f.n[1] === -last[1] && f.n[2] === -last[2]);
+    });
+    if (!exits.length) continue;
+    const exit = pick(exits);
+    const inPt = entry.n.map((v, i) => v ? v * 1.5 : cell[i]);
+    const outPt = exit.n.map((v, i) => v ? v * 1.5 : cur[i]);
+    return { pts: [inPt].concat(pts, [outPt]), entry, exit };
+  }
+  return null;
+}
+function tubeQuestion() {
+  const steps = { 1: 3, 2: 5, 3: 7 }[lvl()];
+  let t = null, guard = 0;
+  while (!t && guard++ < 30) t = makeTube(steps);
+  if (!t) t = makeTube(2);
+  const right = String(t.exit.no);
+  const wrongs = shuffle(SFT_FACES.map(f => String(f.no)).filter(v => v !== right));
+  return {
+    eyebrow: "Schlauchfiguren · SFT",
+    plain: `Schlauch mit ${steps} Knicken – Austritt bei ${right}`,
+    render: node => {
+      const w = el("div", { class: "instwrap" });
+      /* Der Kasten misst 3 Einheiten; die Projektion reicht bis 3*S in beide
+         Richtungen, deshalb muss die Fläche mindestens 6*S messen. */
+      const S = 62, W = 420, H = 400;
+      const px = p => [W / 2 + (p[0] - p[2]) * ISO_C * S, H / 2 + ((p[0] + p[2]) * ISO_S - p[1]) * S];
+      const facePoly = n => {
+        const ax = n.findIndex(v => v !== 0), o1 = (ax + 1) % 3, o2 = (ax + 2) % 3;
+        return [[-1.5, -1.5], [1.5, -1.5], [1.5, 1.5], [-1.5, 1.5]].map(c => {
+          const q = [0, 0, 0]; q[ax] = n[ax] * 1.5; q[o1] = c[0]; q[o2] = c[1]; return q;
+        });
+      };
+      canvasBox(w, W, H, x => {
+        x.fillStyle = cssv("--panel-2"); x.fillRect(0, 0, W, H);
+        x.strokeStyle = cssv("--line"); x.lineWidth = 1; x.strokeRect(.5, .5, W - 1, H - 1);
+        /* Durch den offenen Kasten sieht man auf die drei hinteren Innenwände */
+        [[-1, 0, 0], [0, -1, 0], [0, 0, -1]].forEach(n => {
+          const poly = facePoly(n).map(px);
+          x.beginPath(); poly.forEach((q, i) => (i ? x.lineTo(q[0], q[1]) : x.moveTo(q[0], q[1]))); x.closePath();
+          x.fillStyle = cssv("--panel-3"); x.fill();
+          /* Raster auf den Wänden macht Tiefe und Höhe ablesbar */
+          const ax = n.findIndex(v => v !== 0), o1 = (ax + 1) % 3, o2 = (ax + 2) % 3;
+          x.strokeStyle = cssv("--line-soft"); x.lineWidth = 1;
+          [-0.5, 0.5].forEach(t => {
+            [[o1, o2], [o2, o1]].forEach(([a, bAx]) => {
+              const p1 = [0, 0, 0], p2 = [0, 0, 0];
+              p1[ax] = p2[ax] = n[ax] * 1.5; p1[a] = p2[a] = t; p1[bAx] = -1.5; p2[bAx] = 1.5;
+              const A = px(p1), B = px(p2);
+              x.beginPath(); x.moveTo(A[0], A[1]); x.lineTo(B[0], B[1]); x.stroke();
+            });
+          });
+        });
+        /* Alle zwölf Kanten */
+        const c = [];
+        [-1.5, 1.5].forEach(X => [-1.5, 1.5].forEach(Y => [-1.5, 1.5].forEach(Z => c.push([X, Y, Z]))));
+        x.strokeStyle = cssv("--ink-3"); x.lineWidth = 1.4;
+        c.forEach((a, i) => c.forEach((bb, j) => {
+          if (j <= i) return;
+          const d = Math.abs(a[0] - bb[0]) + Math.abs(a[1] - bb[1]) + Math.abs(a[2] - bb[2]);
+          if (Math.abs(d - 3) > 1e-6) return;
+          const A = px(a), B = px(bb);
+          x.beginPath(); x.moveTo(A[0], A[1]); x.lineTo(B[0], B[1]); x.stroke();
+        }));
+        /* Lote auf den Boden zeigen die Höhe jedes Knicks */
+        const base = t.pts.map(q => px([q[0], -1.5, q[2]]));
+        x.strokeStyle = cssv("--ink-3"); x.lineWidth = 1; x.setLineDash([3, 4]); x.globalAlpha = .55;
+        t.pts.forEach((q, i) => {
+          const A = px(q), B = base[i];
+          x.beginPath(); x.moveTo(A[0], A[1]); x.lineTo(B[0], B[1]); x.stroke();
+        });
+        x.beginPath(); base.forEach((q, i) => (i ? x.lineTo(q[0], q[1]) : x.moveTo(q[0], q[1]))); x.stroke();
+        x.setLineDash([]); x.globalAlpha = 1;
+        /* Schlauch mit Kontursaum, damit er über dem Raster steht */
+        const path = t.pts.map(px);
+        const stroke = wd => { x.beginPath(); path.forEach((q, i) => (i ? x.lineTo(q[0], q[1]) : x.moveTo(q[0], q[1]))); x.lineWidth = wd; x.stroke(); };
+        x.lineJoin = "round"; x.lineCap = "round";
+        x.strokeStyle = cssv("--panel-2"); stroke(12);
+        x.strokeStyle = cssv("--data"); stroke(6);
+        /* Eintritt markieren, Beschriftung auf eigener Fläche */
+        const e0 = path[0], eN = path[path.length - 1];
+        /* Offener Ring am Ende: zeigt, wo der Schlauch aufhört, nicht an welcher Fläche */
+        x.beginPath(); x.arc(eN[0], eN[1], 8, 0, 7);
+        x.fillStyle = cssv("--panel-2"); x.fill();
+        x.strokeStyle = cssv("--ink-2"); x.lineWidth = 2.5; x.stroke();
+        x.beginPath(); x.arc(e0[0], e0[1], 8, 0, 7);
+        x.fillStyle = cssv("--ok"); x.fill();
+        x.strokeStyle = cssv("--panel-2"); x.lineWidth = 2.5; x.stroke();
+        x.font = "600 11px 'Barlow Condensed', sans-serif";
+        x.textAlign = "left"; x.textBaseline = "alphabetic";
+        const tw = x.measureText("EINGANG").width + 8;
+        const tx = clamp(e0[0] + 12, 3, W - tw - 3), ty = clamp(e0[1] - 16, 3, H - 18);
+        x.fillStyle = cssv("--panel"); x.fillRect(tx, ty, tw, 15);
+        x.fillStyle = cssv("--ok"); x.fillText("EINGANG", tx + 4, ty + 11);
+        /* Flächennummern knapp außerhalb des Kastens */
+        SFT_FACES.forEach(f => {
+          const q = px(f.n.map(v => v * 2.15));
+          x.beginPath(); x.arc(q[0], q[1], 12, 0, 7);
+          x.fillStyle = cssv("--panel"); x.fill();
+          x.strokeStyle = cssv("--ink-3"); x.lineWidth = 1.2; x.stroke();
+          x.fillStyle = cssv("--ink-2");
+          x.font = "500 13px 'IBM Plex Mono', monospace";
+          x.textAlign = "center"; x.textBaseline = "middle";
+          x.fillText(String(f.no), q[0], q[1] + .5);
+        });
+      });
+      node.appendChild(w);
+    },
+    stem: "Der Schlauch tritt am grünen Punkt ein. <b>Bei welcher Nummer tritt er wieder aus?</b>",
+    sub: "Der Kasten ist durchsichtig; die gestrichelten Lote zeigen die Höhe über dem Boden.",
+    numericOpts: true,
+    options: textOptions(right, wrongs),
+    explain: `Der Schlauch tritt bei <b>${t.entry.no}</b> ein und bei <b>${right}</b> aus. Verfolge ihn abschnittweise und achte bei jedem Knick nur auf eine Frage: Geht es jetzt nach oben oder unten, nach vorne oder hinten, nach links oder rechts? Die Lotlinien verraten, ob ein Abschnitt die Höhe ändert.`
+  };
+}
+</script>
+<script>
 /* ═══ Module registry ═══════════════════════════════════════════════ */
 const ic = d => `<svg width="19" height="19" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
 const MODULES = [
   { id: "math", name: "Kopfrechnen", kind: "Rechnen unter Zeitdruck", code: "KRN", count: 12, perQ: 45,
     icon: ic('<path d="M3 6h5M5.5 3.5v5M12 5.5h5M12 14.5h5M12 12l4.5 4.5M16.5 12L12 16.5M3 15h5"/>'),
-    desc: "Fliegerische Überschlagsrechnungen und Grundrechenarten ohne Hilfsmittel – Zeit-Weg-Geschwindigkeit, Treibstoff, Sinkprofile, Einheiten.",
-    what: "Getestet wird sicheres, schnelles Kopfrechnen unter Zeitdruck. Es geht weniger um komplizierte Mathematik als um Zahlensicherheit und den Umgang mit fliegerischen Faustformeln.",
-    tips: ["Runde großzügig und rechne mit dem gerundeten Wert weiter – bei vier vorgegebenen Antworten reicht die Größenordnung meist aus.",
+    desc: "Fliegerische Überschlagsrechnungen und Grundrechenarten ohne Hilfsmittel. Die Aufgaben werden angesagt, nicht angezeigt – wie in der Berufsgrunduntersuchung.",
+    what: "Getestet wird sicheres, schnelles Kopfrechnen unter Zeitdruck. In der Berufsgrunduntersuchung kommen die Aufgaben ausschließlich über Kopfhörer: Du musst die Angabe erst aus der Ansage aufnehmen und im Kopf behalten, während du rechnest.",
+    tips: ["Bei der Ansage zuerst die Zahlen festhalten, dann die Frage. Wer mitzurechnen beginnt, bevor der Satz zu Ende ist, verliert die zweite Zahl.",
+      "Runde großzügig und rechne mit dem gerundeten Wert weiter – bei vier vorgegebenen Antworten reicht die Größenordnung meist aus.",
       "Lerne die Faustformeln auswendig: 3:1-Regel für den Sinkflug, Sinkrate ≈ Grundgeschwindigkeit × 5, 1 NM = 1,852 km, 1 hPa ≈ 27 ft.",
       "Rechne Geschwindigkeit sofort in NM pro Minute um (kt ÷ 60) – damit werden Zeitaufgaben zu einfachen Multiplikationen.",
       "Nicht an einer Aufgabe festbeißen. Wer eine Aufgabe verliert, aber im Takt bleibt, kommt besser durch als umgekehrt."],
-    run: () => runQuiz({ count: 12, perQ: 45, next: () => mathQuestion() }) },
+    spec: lv => ["12 Aufgaben", "Ansage, dann " + Math.round(32 * LEVELS[lv].t) + " s"],
+    run: runKRN },
 
   { id: "tech", name: "Technisches Verständnis", kind: "Physik & Technik", code: "TVT", count: 12, perQ: 50,
     icon: ic('<circle cx="10" cy="10" r="2.6"/><path d="M10 2.5v2.2M10 15.3v2.2M2.5 10h2.2M15.3 10h2.2M4.7 4.7l1.6 1.6M13.7 13.7l1.6 1.6M15.3 4.7l-1.6 1.6M6.3 13.7l-1.6 1.6"/>'),
@@ -3156,15 +3767,57 @@ const MODULES = [
       "Zeigt der Weg nach oben, stimmen Blatt und Fahrtrichtung überein – diese Abschnitte gehen schnell."],
     run: () => runQuiz({ count: 10, perQ: 30, next: () => routeQuestion() }) },
 
-  { id: "logic", name: "Logisches Denken", kind: "Schlussfolgern · Ergänzung", count: 12, perQ: 45,
+  { id: "logic", name: "Logisches Denken", kind: "Schlussfolgern", code: "MAT · SAD", count: 12, perQ: 45,
     icon: ic('<circle cx="6" cy="6" r="3.2"/><circle cx="14" cy="6" r="3.2"/><path d="M10 10.5v2M6.5 12.5h7l-3.5 5.5-3.5-5.5z"/>'),
-    desc: "Zahlen- und Buchstabenreihen, Figurenmatrizen und formale Schlussfolgerungen – ergänzend zu den DLR-Untertests.",
-    what: "Schlussfolgerndes Denken ist kein eigener DLR-Untertest, gehört aber zu fast allen anderen Auswahlverfahren der Branche und trainiert das Erkennen von Regeln unter Zeitdruck.",
+    desc: "Figurenmatrizen ergänzen, Zahlen- und Buchstabenreihen fortsetzen, formale Schlüsse ziehen.",
+    what: "Der Bereich Logik umfasst den Matrizentest (MAT) und die Symboladdition (SAD). Geprüft wird, ob du in einer Anordnung die zugrunde liegende Regel erkennst – und ob du beim Schließen sauber zwischen „folgt zwingend“ und „klingt plausibel“ trennst.",
     tips: ["Bei Reihen zuerst die Differenzen bilden. Ergeben die Differenzen selbst eine Reihe, ist die Aufgabe gelöst.",
       "Bei Matrizen jedes Merkmal einzeln prüfen – Form, Anzahl, Füllung nacheinander statt alles auf einmal.",
       "Bei Schlussfolgerungen zählt nur, was zwingend folgt. Was plausibel klingt, aber nicht erzwungen ist, ist falsch.",
       "Die Umkehrung eines Satzes gilt nie automatisch: Aus „alle A sind B“ folgt nicht „alle B sind A“."],
     run: () => runQuiz({ count: 12, perQ: 45, next: () => logicQuestion() }) },
+
+
+  { id: "vmc", name: "Visuelles Gedächtnis", kind: "Arbeitsgedächtnis", code: "VMC", count: 3, perQ: 0,
+    icon: ic('<rect x="2.6" y="5" width="5" height="10" rx="1"/><rect x="12.4" y="5" width="5" height="10" rx="1"/><path d="M8.4 10h3.2M10 8.4v3.2"/>'),
+    desc: "Symbole laufen einzeln durch. Verglichen wird jedes mit dem Symbol n Schritte zuvor – n wird vor jedem Block neu vorgegeben.",
+    what: "Der n-back-Test prüft das visuelle Arbeitsgedächtnis: Du musst laufend die letzten n Symbole mitführen und gleichzeitig das aktuelle mit dem ältesten davon vergleichen. Anders als beim Auswendiglernen wird das Fenster bei jedem Symbol verschoben.",
+    tips: ["Führe die letzten n Symbole als feste Kette im Kopf mit und schiebe bei jedem neuen Symbol das älteste hinaus.",
+      "Sprich Form und Farbe innerlich mit („Kreis gelb, Raute cyan …“) – gesprochene Ketten halten besser als Bilder.",
+      "Nach einem Fehler nicht zurückdenken. Die Kette ist wichtiger als die einzelne Antwort; wer grübelt, verliert die nächsten drei.",
+      "Bei 4- und 5-back hilft ein Rhythmus: immer im gleichen Takt antworten, auch wenn du unsicher bist."],
+    spec: lv => [({ 1: 3, 2: 3, 3: 3 }[lv]) + " Blöcke", "n = " + ({ 1: "2–3", 2: "2–4", 3: "3–5" }[lv])],
+    run: runVMC },
+
+  { id: "est", name: "Schätzaufgaben", kind: "Überschlagsrechnen", code: "EST", count: 14, perQ: 22,
+    icon: ic('<path d="M3 14.5c2.5-3 4-6 5-6s1.5 3 3 3 2.5-4 6-4"/><path d="M2.6 3.2v13.6h14.8"/>'),
+    desc: "Den ungefähren Wert bestimmen, statt exakt zu rechnen. Die Zeit reicht bewusst nicht für den genauen Weg.",
+    what: "Geprüft wird, ob du Größenordnungen sicher abschätzen kannst. Wer hier exakt rechnet, verliert die Aufgabe an der Zeit – gefragt ist eine schnelle, tragfähige Näherung.",
+    tips: ["Runde beide Zahlen auf eine führende Ziffer und rechne damit. Die Antwortoptionen liegen weit genug auseinander.",
+      "Bei Prozenten immer über 10 %: 10 % ablesen, dann vervielfachen.",
+      "Bei Wurzeln die nächstgelegene Quadratzahl suchen und von dort korrigieren.",
+      "Zähle die Stellen mit – die häufigsten Fehler sind Zehnerpotenzen, nicht die Ziffern."],
+    run: () => runQuiz({ count: 14, perQ: 22, next: () => estQuestion() }) },
+
+  { id: "rot", name: "Würfelrotation", kind: "Räumliches Vorstellen", code: "ROT", count: 10, perQ: 40,
+    icon: ic('<path d="M10 2.6l6.4 3.7v7.4L10 17.4 3.6 13.7V6.3L10 2.6z"/><path d="M3.6 6.3L10 10l6.4-3.7M10 10v7.4"/><path d="M13.4 3.4a7 7 0 012.6 2.3"/>'),
+    desc: "Zwei Würfel zeigen dieselben Zeichen. Ist der eine wirklich nur eine Drehung des anderen – oder eine Spiegelung?",
+    what: "Anders als beim Würfelklappen wird hier nichts gefaltet: Ein fertiger Würfel wird gedreht. Geprüft wird, ob du die Lage der Zeichen zueinander im Kopf mitdrehen kannst.",
+    tips: ["Nimm zwei Zeichen der Vorlage und merke dir ihre Drehrichtung zueinander – etwa „Pfeil oben, Blitz rechts davon“.",
+      "Diese Drehrichtung bleibt bei jeder echten Drehung erhalten. Ist sie umgekehrt, ist der Würfel gespiegelt und scheidet aus.",
+      "Ein einzelnes Zeichen sagt nichts. Erst das Verhältnis von zwei oder drei Zeichen entscheidet.",
+      "Gegenüberliegende Seiten sind nie gleichzeitig sichtbar – tauchen zwei Zeichen zusammen auf, die auf der Vorlage gegenüberlagen, ist die Antwort falsch."],
+    run: () => runQuiz({ count: 10, perQ: 40, next: () => rotQuestion() }) },
+
+  { id: "tube", name: "Schlauchfiguren", kind: "Räumliches Verfolgen", code: "SFT", count: 10, perQ: 40,
+    icon: ic('<path d="M4 3.2v6.6a3 3 0 003 3h4.6a3 3 0 013 3v1"/><circle cx="4" cy="3.2" r="1.6"/>'),
+    desc: "Ein Schlauch läuft durch einen durchsichtigen Kasten. An welcher der sechs Flächen tritt er wieder aus?",
+    what: "Der Klassiker unter den räumlichen Tests: einen dreidimensionalen Verlauf in einer zweidimensionalen Zeichnung verfolgen und dabei Tiefe von Höhe unterscheiden.",
+    tips: ["Verfolge abschnittweise und frage bei jedem Knick nur eines: hoch oder runter, vor oder zurück, links oder rechts.",
+      "Die gestrichelten Lote zeigen die Höhe über dem Boden – daran erkennst du, ob ein Abschnitt steigt oder nur nach hinten läuft.",
+      "Merke dir bei jedem Knick die neue Richtung laut mitgesprochen, statt das Bild als Ganzes erfassen zu wollen.",
+      "Der letzte Abschnitt entscheidet: Er zeigt direkt auf die Austrittsfläche."],
+    run: () => runQuiz({ count: 10, perQ: 40, next: () => tubeQuestion() }) },
 
   { id: "multitask", name: "Multitasking", kind: "Aufmerksamkeitsverteilung", code: "MIC", count: 1, perQ: 95,
     icon: ic('<path d="M3 3h6v6H3zM11 3h6v6h-6zM3 11h6v6H3zM11 11h6v6h-6z"/>'),
@@ -3225,7 +3878,7 @@ function renderHome() {
   const hero = el("div", { class: "hero" });
   const left = el("div");
   left.appendChild(el("h1", { html: "Aufnahmetest<br><em>Cockpit-Nachwuchs</em>" }));
-  left.appendChild(el("p", { class: "sub", html: "Fünfzehn Trainingsmodule nach dem Muster der DLR-Berufsgrunduntersuchung – von Kopfrechnen, technischem Verständnis und Englisch über Würfelklappen, Wegfiguren und akustisches Gedächtnis bis zu Dauer&shy;aufmerksamkeit und Multitasking. Die Kürzel auf den Karten nennen den jeweiligen Untertest. Alle Aufgaben werden bei jedem Durchgang neu erzeugt." }));
+  left.appendChild(el("p", { class: "sub", html: "Neunzehn Trainingsmodule nach dem Muster der DLR-Berufsgrunduntersuchung – Kopfrechnen kommt wie im Original <b>über die Ansage</b>, dazu Schätzaufgaben, Würfelklappen und -rotation, Schlauchfiguren, Wegfiguren, akustisches und visuelles Arbeitsgedächtnis, Wahrnehmung, Logik und Multitasking. Die Kürzel auf den Karten nennen den jeweiligen Untertest. Alle Aufgaben werden bei jedem Durchgang neu erzeugt." }));
   const cta = el("div", { class: "cta" });
   cta.appendChild(el("button", { class: "btn pri", text: "Prüfungssimulation starten", onclick: () => go("exam") }));
   cta.appendChild(el("button", { class: "btn", text: "Zufallsmodul", onclick: () => go("brief", pick(MODULES).id) }));
@@ -3411,25 +4064,28 @@ function renderResult(m, res) {
 <script>
 /* ═══ Prüfungssimulation ════════════════════════════════════════════ */
 const EXAM_SETS = {
-  short: { name: "Kurzsimulation", note: "Sechs Module quer durch die Testbereiche, rund 15 Minuten – für den regelmäßigen Formcheck.",
-    steps: [{ id: "math", count: 8, perQ: 40 }, { id: "spatial", count: 8, perQ: 18 }, { id: "cube", count: 6, perQ: 35 },
-            { id: "rms" }, { id: "english", count: 8, perQ: 50 }, { id: "skt" }] },
-  full: { name: "Vollständige Simulation", note: "Alle fünfzehn Module in einem Durchgang, rund 55–65 Minuten – ohne Rückmeldung zwischendurch, wie im Ernstfall.",
-    steps: [{ id: "math", count: 10, perQ: 40 }, { id: "tech", count: 10, perQ: 45 }, { id: "cube", count: 8, perQ: 35 },
-            { id: "spatial", count: 8, perQ: 18 }, { id: "route", count: 8, perQ: 26 }, { id: "rms" },
-            { id: "english", count: 10, perQ: 50 }, { id: "owt" }, { id: "memory" }, { id: "logic", count: 8, perQ: 40 },
-            { id: "instruments", count: 8, perQ: 22 }, { id: "trace", count: 6, perQ: 30 },
+  short: { name: "Kurzsimulation", note: "Sechs Module quer durch die Testbereiche, rund 18 Minuten – für den regelmäßigen Formcheck.",
+    steps: [{ id: "math", count: 8, perQ: 32 }, { id: "cube", count: 6, perQ: 35 }, { id: "est", count: 10, perQ: 20 },
+            { id: "rms" }, { id: "tube", count: 6, perQ: 36 }, { id: "skt" }] },
+  full: { name: "Vollständige Simulation", note: "Alle neunzehn Module in einem Durchgang, rund 75–90 Minuten – ohne Rückmeldung zwischendurch, wie im Ernstfall.",
+    steps: [{ id: "math", count: 10, perQ: 32 }, { id: "est", count: 12, perQ: 20 }, { id: "tech", count: 10, perQ: 45 },
+            { id: "cube", count: 8, perQ: 35 }, { id: "rot", count: 8, perQ: 36 }, { id: "tube", count: 8, perQ: 36 },
+            { id: "route", count: 8, perQ: 26 }, { id: "rms" }, { id: "vmc" }, { id: "english", count: 10, perQ: 50 },
+            { id: "owt" }, { id: "logic", count: 8, perQ: 40 }, { id: "memory" }, { id: "instruments", count: 8, perQ: 22 },
+            { id: "spatial", count: 8, perQ: 18 }, { id: "trace", count: 6, perQ: 30 },
             { id: "skt" }, { id: "concentration" }, { id: "multitask" }] }
 };
 function examRunner(step) {
   const custom = { memory: runMemory, concentration: runConcentration, multitask: runMultitask,
-                   rms: runRMS, owt: runOWT, skt: runSKT };
+                   rms: runRMS, owt: runOWT, skt: runSKT, vmc: runVMC };
   if (custom[step.id]) return custom[step.id];
   const base = { count: step.count, perQ: step.perQ, feedback: false };
   if (step.id === "tech") { const used = new Set(); return () => runQuiz(Object.assign({}, base, { next: i => techQuestion(i, used) })); }
   if (step.id === "english") { const used = new Set(); return () => runQuiz(Object.assign({}, base, { next: i => engQuestion(i, used) })); }
-  const gens = { math: mathQuestion, spatial: attitudeQuestion, instruments: instrumentQuestion,
-                 trace: traceQuestion, cube: cubeQuestion, route: routeQuestion, logic: logicQuestion };
+  if (step.id === "math") return () => runQuiz(Object.assign({}, base, { next: () => mathQuestion("audio") }));
+  const gens = { spatial: attitudeQuestion, instruments: instrumentQuestion, trace: traceQuestion,
+                 cube: cubeQuestion, route: routeQuestion, logic: logicQuestion,
+                 est: estQuestion, rot: rotQuestion, tube: tubeQuestion };
   return () => runQuiz(Object.assign({}, base, { next: () => gens[step.id]() }));
 }
 

@@ -30,40 +30,54 @@ Die öffentlich dokumentierten Untertests der DLR-BU und ihre Entsprechung im Tr
 
 | Kürzel | Untertest | Modul |
 |---|---|---|
-| KRN | Kopfrechnen | Kopfrechnen |
+| KRN | Kopfrechnen | Kopfrechnen (mit Ansage) |
 | TVT | Technisches Verständnis | Technisches Verständnis |
 | ENS | Englischtest | Englisch |
-| VMC | Visuelle Merkfähigkeit | Merkfähigkeit |
+| VMC | Visuelles Gedächtnis (n-back) | Visuelles Gedächtnis |
 | RMS | Running Memory Span (akustisch) | Akustisches Gedächtnis |
 | PPT | Würfelklappen | Würfelklappen |
-| WFG | Wegfigurentest | Wegfiguren |
-| ROT | Rotation / räumliche Orientierung | Räumliche Orientierung |
+| WFG · VLR | Wegfigurentest, Kurvenzählen | Wegfiguren |
+| ROT | Würfelrotationstest | Würfelrotation |
+| SFT | Schlauchfigurentest | Schlauchfiguren |
+| EST | Schätzaufgaben | Schätzaufgaben |
+| MAT · SAD | Matrizentest, Symboladdition | Logisches Denken (Matrizen) |
 | OWT | Optischer Wahrnehmungstest | Optische Wahrnehmung |
 | SKT | Dreieckstest | Dreieckstest |
 | MIC | Multitasking / Instrumentenkoordination | Multitasking (siehe Einschränkung) |
 
-**Bewusst nicht abgebildet.** Der MIC wird im Original mit Joystick und Schubhebel
-geflogen; hier läuft der Kanal über Tastatur beziehungsweise Bildschirmtasten. Die
-Anforderung an die Aufmerksamkeitsverteilung bleibt, die feinmotorische Komponente
-fehlt. Die Firmenqualifikation (FQ) – Gruppenübungen, Interviews, Verhaltens­beobachtung
-und der IFR-Simulatorflug – ist ein Assessment-Center mit realen Beteiligten und
-lässt sich in einer Web-App grundsätzlich nicht nachbilden.
+**Noch nicht abgebildet.** RMZ (rotierendes Labyrinth), SVT (Signalverarbeitung),
+VFF (Gestalterkennung), ABQ (Bourdon), AKM und BGT (weitere Gedächtnistests),
+VIM/MEK, TOM, MMT und PMA (weitere psychomotorische Tests) sowie RAG (Textaufgaben).
+
+**Bewusst nicht abgebildet.** Der MIC wird im Original mit Joystick, Touchscreen und
+akustischer Nebenaufgabe geflogen; hier läuft der Kanal über Tastatur beziehungsweise
+Bildschirmtasten. Die Anforderung an die Aufmerksamkeitsverteilung bleibt, die
+feinmotorische Komponente fehlt. Die Firmenqualifikation – Gruppenübungen, Interviews,
+Verhaltens­beobachtung und der Simulatorflug – ist ein Assessment-Center mit realen
+Beteiligten und lässt sich in einer Web-App grundsätzlich nicht nachbilden.
 
 **Ergänzend, kein benannter DLR-Untertest.** Instrumentenablesen, Linienverfolgung,
-Konzentration (d2-Prinzip) und Logisches Denken. Diese Aufgabentypen kommen in
-anderen Auswahlverfahren der Branche vor und trainieren verwandte Fähigkeiten.
+Konzentration (d2-Prinzip) und die Fluglagen unter „Räumliche Orientierung“. Diese
+Aufgabentypen kommen in anderen Auswahlverfahren der Branche vor und trainieren
+verwandte Fähigkeiten.
+
+Belege und Belegstufen zu allen Angaben stehen in `dlr-referenz.html`.
 
 ## Module
 
 | Modul | Getestet wird | Umsetzung |
 |---|---|---|
-| Kopfrechnen | Zahlensicherheit unter Zeitdruck | 13 Aufgabengeneratoren: Zeit-Weg-Geschwindigkeit, Treibstoff, 3:1-Sinkprofil, Einheiten, Windkomponenten, ISA, Höhenmesser, Zahlenreihen |
+| Kopfrechnen | Zahlensicherheit unter Zeitdruck | 13 Aufgabengeneratoren; die Aufgabe wird **vorgelesen** statt angezeigt, wie in der Berufsgrunduntersuchung. Stille Darstellung als Rückfallebene |
+| Schätzaufgaben | Größenordnungen überschlagen | Multiplikationen, Divisionen, Prozente, Wurzeln – alle Optionen auf zwei signifikante Stellen gerundet, gesucht ist die nächstliegende |
 | Technisches Verständnis | Physik und Flugzeugsysteme | Fragenpool zu Mechanik, Fluiden, Elektrik, Aerodynamik, Systemen – je mit Lösungsweg |
 | Englisch | Wortschatz, Grammatik, Leseverständnis | Fragenpool inkl. Fließtextaufgaben und Standard-Sprechgruppen |
-| Würfelklappen | Räumliches Vorstellungsvermögen | Neun geprüfte Würfelnetze, exakt gefaltet; die Zeichen sind lagerichtig, Antworten unterscheiden sich teils nur in der Drehung |
+| Würfelklappen | Räumliches Vorstellungsvermögen | Neun geprüfte Würfelnetze, exakt gefaltet; die Zeichen sind lagerichtig, fünf Antwortwürfel je Aufgabe |
+| Würfelrotation | Drehung von Spiegelung unterscheiden | Vollständige Drehgruppe (24 Elemente); die Lösung ist beweisbar eine Drehung, kein Ablenker ist eine |
+| Schlauchfiguren | Dreidimensionales Verfolgen | Schlauch durch einen durchsichtigen Kasten, Raster und Lote als Tiefenhilfe; Austrittsfläche aus der Geometrie berechnet |
 | Wegfiguren | Räumliche Umorientierung | Prozedural erzeugte, überschneidungsfreie Wege; Kurven zählen aus Sicht des Fahrenden |
 | Räumliche Orientierung | Fluglagen aus dem künstlichen Horizont | Auf Canvas gezeichneter Horizont und Flugzeugsilhouetten von hinten, in beiden Richtungen abgefragt |
 | Merkfähigkeit | Kurzzeitgedächtnis für strukturierte Daten | Zufällig erzeugter Abflugplan, Lernphase mit Zeitlimit, anschließende Abfrage aller Spalten |
+| Visuelles Gedächtnis | Arbeitsgedächtnis (n-back) | Drei Blöcke mit wechselndem n; jedes Symbol wird mit dem n Schritte zuvor verglichen |
 | Akustisches Gedächtnis | Akustisches Arbeitsgedächtnis | Vorgelesene Ziffernfolgen unbekannter Länge, die letzten Ziffern rückwärts eingeben; stille Darstellung als Rückfallebene |
 | Optische Wahrnehmung | Selektive Wahrnehmung | Uhrentafel mit kurzer Standzeit, nur Uhren einer Form und Helligkeit zählen |
 | Dreieckstest | Daueraufmerksamkeit und Regeltreue | Fortlaufende Dreiecke, zwei gemerkte Vergleichsregeln, drei Antworttasten |
@@ -74,7 +88,7 @@ anderen Auswahlverfahren der Branche vor und trainieren verwandte Fähigkeiten.
 | Multitasking | Aufmerksamkeitsverteilung | Drei parallele Kanäle: Kurshaltung, Systemüberwachung, Kopfrechnen – getrennt und gewichtet bewertet |
 
 Dazu kommt eine **Prüfungssimulation** – kurz (sechs Module) oder vollständig
-(alle fünfzehn) –, die die Module ohne Rückmeldung hintereinander durchlaufen lässt und am Ende eine Gesamtauswertung mit Empfehlung
+(alle neunzehn) –, die die Module ohne Rückmeldung hintereinander durchlaufen lässt und am Ende eine Gesamtauswertung mit Empfehlung
 für den nächsten Trainingsschwerpunkt erstellt.
 
 ## Bedienung
@@ -85,6 +99,7 @@ für den nächsten Trainingsschwerpunkt erstellt.
   Systemwarnungen, `G` / `U` für die Rechenaufgabe; auf Touchgeräten über die
   Bildschirmtasten
 - Dreieckstest: `A` / `S` / `D` für die drei Antworten
+- Visuelles Gedächtnis: `A` für „gleich“, `L` für „ungleich“
 - Akustisches Gedächtnis: Zifferntasten, `Rücktaste`, `Enter`
 - Drei Schwierigkeitsstufen steuern Zeitlimits und Aufgabenniveau
 - Tag- und Nachtdarstellung über die Schaltfläche rechts oben
@@ -95,9 +110,12 @@ Reines HTML, CSS und JavaScript ohne Abhängigkeiten. Instrumente, Würfel,
 Uhrentafeln, Wegfiguren und der Multitasking-Kanal werden auf `<canvas>` gezeichnet,
 die Linienverfolgung als SVG erzeugt. Die Würfelnetze werden über die tatsächliche
 Faltgeometrie ausgewertet (Flächennormale plus Aufrichtung je Feld), sodass auch die
-Drehung der Zeichen stimmt; ungültige Netze werden zur Laufzeit ausgefiltert. Das
-akustische Gedächtnis nutzt `speechSynthesis` und fällt bei fehlender Sprachausgabe
-automatisch auf eine stille Darstellung zurück. Ergebnisse liegen ausschließlich in `localStorage` des jeweiligen
+Drehung der Zeichen stimmt; ungültige Netze werden zur Laufzeit ausgefiltert. Die
+Würfelrotation arbeitet mit der vollständigen Drehgruppe des Würfels und vergleicht
+Würfel über eine kanonische Form, sodass eine Lösung beweisbar eine Drehung ist und
+ein Ablenker beweisbar keine. Kopfrechnen und akustisches Gedächtnis nutzen
+`speechSynthesis` und fallen bei fehlender Sprachausgabe automatisch auf eine stille
+Darstellung zurück. Ergebnisse liegen ausschließlich in `localStorage` des jeweiligen
 Browsers; verweigert der Browser den Zugriff, läuft das Training weiter, nur ohne
 gespeicherten Verlauf.
 
